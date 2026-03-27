@@ -2,11 +2,17 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart3, Building2, ClipboardList } from "lucide-react";
+import { BarChart3, Building2, ClipboardList, LogOut } from "lucide-react";
+import useAuth from "@/app/hooks/useAuth";
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const { clinic, logout, isAuthenticated } = useAuth();
   const isActive = (href) => pathname === href;
+
+  if (!isAuthenticated) {
+    return null; // Don't show sidebar on login page
+  }
 
   return (
     <aside className="flex min-h-screen w-64 flex-col border-r border-slate-200 bg-white px-4 py-6">
@@ -22,9 +28,9 @@ export default function Sidebar() {
 
       <nav className="mt-6 space-y-1 text-sm text-slate-600">
         <Link
-          href="/Dashboard"
+          href="/dashboard"
           className={`flex w-full items-center gap-2 rounded-xl px-3 py-2 font-semibold transition hover:-translate-y-0.5 ${
-            isActive("/Dashboard")
+            isActive("/dashboard")
               ? "bg-(--brand-primary)/10 text-(--brand-primary)"
               : "text-slate-500 hover:bg-slate-100"
           }`}
@@ -53,14 +59,25 @@ export default function Sidebar() {
         </Link>
       </nav>
 
-      <div className="mt-auto flex items-center gap-3 rounded-2xl bg-slate-50 px-3 py-3 text-xs text-slate-600">
-        <div className="grid h-9 w-9 place-items-center rounded-full bg-white text-(--brand-primary)">
-          AD
+      <div className="mt-auto space-y-3">
+        {/* User Info */}
+        <div className="flex items-center gap-3 rounded-2xl bg-slate-50 px-3 py-3 text-xs text-slate-600">
+          <div className="grid h-9 w-9 place-items-center rounded-full bg-white text-(--brand-primary)">
+            {clinic?.name?.substring(0, 2).toUpperCase() || "AD"}
+          </div>
+          <div className="min-w-0">
+            <p className="truncate text-xs font-semibold">{clinic?.name || "Admin"}</p>
+            <p className="text-[10px] text-slate-400">Clinic</p>
+          </div>
         </div>
-        <div>
-          <p className="text-xs font-semibold">Admin</p>
-          <p className="text-[10px] text-slate-400">Super User</p>
-        </div>
+
+        {/* Logout Button */}
+        <button
+          onClick={logout}
+          className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold text-slate-500 transition hover:bg-red-50 hover:text-red-600"
+        >
+          <LogOut className="h-4 w-4" /> Logout
+        </button>
       </div>
     </aside>
   );
