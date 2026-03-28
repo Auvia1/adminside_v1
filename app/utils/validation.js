@@ -77,6 +77,21 @@ export function validateRegistrationForm(formData) {
   if (!formData.phone?.trim()) {
     errors.phone = 'Phone is required';
   }
+  if (!formData.username?.trim()) {
+    errors.username = 'Username is required';
+  }
+  if (!formData.password?.trim()) {
+    errors.password = 'Password is required';
+  }
+  if (!formData.confirmPassword?.trim()) {
+    errors.confirmPassword = 'Please confirm password';
+  }
+  if (formData.password && formData.password.length < 6) {
+    errors.password = 'Password must be at least 6 characters';
+  }
+  if (formData.password && formData.confirmPassword && formData.password !== formData.confirmPassword) {
+    errors.confirmPassword = 'Passwords do not match';
+  }
   if (!formData.ownerName?.trim()) {
     errors.ownerName = 'Owner name is required';
   }
@@ -119,6 +134,16 @@ export function validateRegistrationForm(formData) {
   // Postal code validation - only check if provided
   if (formData.postal?.trim() && !validatePostalCode(formData.postal)) {
     errors.postal = 'Postal code must be 6 digits';
+  }
+
+  // Latitude validation - only check if provided
+  if (formData.latitude && (isNaN(formData.latitude) || formData.latitude < -90 || formData.latitude > 90)) {
+    errors.latitude = 'Latitude must be between -90 and 90';
+  }
+
+  // Longitude validation - only check if provided
+  if (formData.longitude && (isNaN(formData.longitude) || formData.longitude < -180 || formData.longitude > 180)) {
+    errors.longitude = 'Longitude must be between -180 and 180';
   }
 
   return errors;

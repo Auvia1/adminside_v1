@@ -20,6 +20,7 @@ import { validateRegistrationForm } from "@/app/utils/validation";
 
 const steps = [
   "Basic Details",
+  "Credentials",
   "Owner Details",
   "Receptionist",
   "Plan & Payment",
@@ -44,6 +45,11 @@ export default function NewClinicDialog({ triggerClassName }) {
     postal: "",
     phone: "",
     email: "",
+    username: "",
+    password: "",
+    confirmPassword: "",
+    latitude: "",
+    longitude: "",
     ownerName: "",
     ownerEmail: "",
     ownerPhone: "",
@@ -53,7 +59,7 @@ export default function NewClinicDialog({ triggerClassName }) {
     receptionistPhone: "",
     receptionistShift: "",
     plan: "",
-    billingCycle: "Monthly",
+    billingCycle: "monthly",
     paymentMethod: "",
     cardNumber: "",
     cardName: "",
@@ -139,6 +145,10 @@ export default function NewClinicDialog({ triggerClassName }) {
         postal: form.postal || undefined,
         phone: form.phone,
         email: form.email,
+        username: form.username,
+        password: form.password,
+        latitude: form.latitude ? parseFloat(form.latitude) : undefined,
+        longitude: form.longitude ? parseFloat(form.longitude) : undefined,
         ownerName: form.ownerName,
         ownerEmail: form.ownerEmail,
         ownerPhone: form.ownerPhone || undefined,
@@ -174,6 +184,11 @@ export default function NewClinicDialog({ triggerClassName }) {
             postal: "",
             phone: "",
             email: "",
+            username: "",
+            password: "",
+            confirmPassword: "",
+            latitude: "",
+            longitude: "",
             ownerName: "",
             ownerEmail: "",
             ownerPhone: "",
@@ -183,7 +198,7 @@ export default function NewClinicDialog({ triggerClassName }) {
             receptionistPhone: "",
             receptionistShift: "",
             plan: "",
-            billingCycle: "Monthly",
+            billingCycle: "monthly",
             paymentMethod: "",
             cardNumber: "",
             cardName: "",
@@ -346,6 +361,77 @@ export default function NewClinicDialog({ triggerClassName }) {
             {step === 1 && (
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2 md:col-span-2">
+                  <label className="text-xs font-semibold text-slate-500">Username *</label>
+                  <Input
+                    value={form.username}
+                    onChange={updateField("username")}
+                    className={validationErrors.username ? "border-red-500" : ""}
+                    placeholder="For clinic login"
+                  />
+                  {validationErrors.username && (
+                    <p className="text-xs text-red-500">{validationErrors.username}</p>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold text-slate-500">Password *</label>
+                  <Input
+                    type="password"
+                    value={form.password}
+                    onChange={updateField("password")}
+                    className={validationErrors.password ? "border-red-500" : ""}
+                    placeholder="Min 6 characters"
+                  />
+                  {validationErrors.password && (
+                    <p className="text-xs text-red-500">{validationErrors.password}</p>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold text-slate-500">Confirm Password *</label>
+                  <Input
+                    type="password"
+                    value={form.confirmPassword}
+                    onChange={updateField("confirmPassword")}
+                    className={validationErrors.confirmPassword ? "border-red-500" : ""}
+                    placeholder="Re-enter password"
+                  />
+                  {validationErrors.confirmPassword && (
+                    <p className="text-xs text-red-500">{validationErrors.confirmPassword}</p>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold text-slate-500">Latitude (Optional)</label>
+                  <Input
+                    type="number"
+                    step="0.0001"
+                    value={form.latitude}
+                    onChange={updateField("latitude")}
+                    className={validationErrors.latitude ? "border-red-500" : ""}
+                    placeholder="e.g., 19.0760"
+                  />
+                  {validationErrors.latitude && (
+                    <p className="text-xs text-red-500">{validationErrors.latitude}</p>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold text-slate-500">Longitude (Optional)</label>
+                  <Input
+                    type="number"
+                    step="0.0001"
+                    value={form.longitude}
+                    onChange={updateField("longitude")}
+                    className={validationErrors.longitude ? "border-red-500" : ""}
+                    placeholder="e.g., 72.8777"
+                  />
+                  {validationErrors.longitude && (
+                    <p className="text-xs text-red-500">{validationErrors.longitude}</p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {step === 2 && (
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2 md:col-span-2">
                   <label className="text-xs font-semibold text-slate-500">Owner Name *</label>
                   <Input
                     value={form.ownerName}
@@ -386,7 +472,7 @@ export default function NewClinicDialog({ triggerClassName }) {
               </div>
             )}
 
-            {step === 2 && (
+            {step === 3 && (
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2 md:col-span-2">
                   <label className="text-xs font-semibold text-slate-500">Receptionist Name (Optional)</label>
@@ -422,7 +508,7 @@ export default function NewClinicDialog({ triggerClassName }) {
               </div>
             )}
 
-            {step === 3 && (
+            {step === 4 && (
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <label className="text-xs font-semibold text-slate-500">Plan</label>
@@ -489,7 +575,7 @@ export default function NewClinicDialog({ triggerClassName }) {
               </div>
             )}
 
-            {step === 4 && (
+            {step === 5 && (
               <div className="space-y-4">
                 <div className="space-y-2">
                   <label className="text-xs font-semibold text-slate-500">Upload Documents</label>
@@ -512,7 +598,7 @@ export default function NewClinicDialog({ triggerClassName }) {
               </div>
             )}
 
-            {step === 5 && (
+            {step === 6 && (
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <label className="text-xs font-semibold text-slate-500">Contract Start</label>
@@ -531,18 +617,21 @@ export default function NewClinicDialog({ triggerClassName }) {
               </div>
             )}
 
-            {step === 6 && (
+            {step === 7 && (
               <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4 text-sm text-slate-600">
                 <p className="font-semibold text-slate-700">Review Summary</p>
                 <ul className="mt-2 space-y-1 text-xs">
                   <li><strong>Clinic:</strong> {form.clinicName || "—"}</li>
                   <li><strong>Type:</strong> {form.clinicType || "—"}</li>
                   <li><strong>Email:</strong> {form.email || "—"}</li>
+                  <li><strong>Username:</strong> {form.username || "—"}</li>
                   <li><strong>Owner:</strong> {form.ownerName || "—"}</li>
                   <li><strong>Receptionist:</strong> {form.receptionistName || "—"}</li>
                   <li><strong>Plan:</strong> {form.plan || "—"}</li>
                   <li><strong>Billing Cycle:</strong> {form.billingCycle || "—"}</li>
                   <li><strong>Payment Method:</strong> {form.paymentMethod || "—"}</li>
+                  {form.latitude && <li><strong>Latitude:</strong> {form.latitude}</li>}
+                  {form.longitude && <li><strong>Longitude:</strong> {form.longitude}</li>}
                   <li><strong>Documents:</strong> {form.documents.length} files</li>
                   <li><strong>Contract Start:</strong> {form.contractStart || "—"}</li>
                   <li><strong>Contract End:</strong> {form.contractEnd || "—"}</li>
