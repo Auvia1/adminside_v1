@@ -3,6 +3,8 @@
  */
 
 export function validateEmail(email) {
+  // Allow empty
+  if (!email || !email.trim()) return true;
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   return emailRegex.test(email);
 }
@@ -39,12 +41,15 @@ export function validateCardExpiry(expiry) {
 }
 
 export function validatePostalCode(postal) {
-  // For India: 6 digits
+  // For India: 6 digits - allow empty
+  if (!postal || !postal.trim()) return true;
   const postalRegex = /^[0-9]{6}$/;
   return postalRegex.test(postal.replace(/\D/g, ''));
 }
 
 export function validatePhone10Digits(phone) {
+  // Allow empty
+  if (!phone || !phone.trim()) return true;
   const digits = phone.replace(/\D/g, '');
   return digits.length === 10;
 }
@@ -62,47 +67,57 @@ export function validateRequiredFields(formData, requiredFields) {
 export function validateRegistrationForm(formData) {
   const errors = {};
 
-  // Required fields
-  if (!formData.clinicName?.trim()) errors.clinicName = 'Clinic name is required';
-  if (!formData.email?.trim()) errors.email = 'Email is required';
-  if (!formData.phone?.trim()) errors.phone = 'Phone is required';
-  if (!formData.ownerName?.trim()) errors.ownerName = 'Owner name is required';
-  if (!formData.ownerEmail?.trim()) errors.ownerEmail = 'Owner email is required';
-
-  // Email validation
-  if (formData.email && !validateEmail(formData.email)) {
-    errors.email = 'Invalid email format';
+  // Required fields - strip whitespace
+  if (!formData.clinicName?.trim()) {
+    errors.clinicName = 'Clinic name is required';
   }
-  if (formData.ownerEmail && !validateEmail(formData.ownerEmail)) {
-    errors.ownerEmail = 'Invalid email format';
+  if (!formData.email?.trim()) {
+    errors.email = 'Email is required';
   }
-  if (formData.receptionistEmail && !validateEmail(formData.receptionistEmail)) {
-    errors.receptionistEmail = 'Invalid email format';
+  if (!formData.phone?.trim()) {
+    errors.phone = 'Phone is required';
   }
-
-  // Phone validation (10 digits)
-  if (formData.phone && !validatePhone10Digits(formData.phone)) {
-    errors.phone = 'Phone must be 10 digits';
+  if (!formData.ownerName?.trim()) {
+    errors.ownerName = 'Owner name is required';
   }
-  if (formData.ownerPhone && !validatePhone10Digits(formData.ownerPhone)) {
-    errors.ownerPhone = 'Phone must be 10 digits';
-  }
-  if (formData.receptionistPhone && !validatePhone10Digits(formData.receptionistPhone)) {
-    errors.receptionistPhone = 'Phone must be 10 digits';
+  if (!formData.ownerEmail?.trim()) {
+    errors.ownerEmail = 'Owner email is required';
   }
 
-  // GST validation
-  if (formData.gstNumber && !validateGST(formData.gstNumber)) {
-    errors.gstNumber = 'Invalid GST number format';
+  // Email validation - only check if provided
+  if (formData.email?.trim() && !validateEmail(formData.email)) {
+    errors.email = 'Invalid email format (e.g., user@example.com)';
+  }
+  if (formData.ownerEmail?.trim() && !validateEmail(formData.ownerEmail)) {
+    errors.ownerEmail = 'Invalid email format (e.g., user@example.com)';
+  }
+  if (formData.receptionistEmail?.trim() && !validateEmail(formData.receptionistEmail)) {
+    errors.receptionistEmail = 'Invalid email format (e.g., user@example.com)';
   }
 
-  // Card expiry validation
-  if (formData.cardExpiry && !validateCardExpiry(formData.cardExpiry)) {
-    errors.cardExpiry = 'Invalid expiry date (use MM/YY)';
+  // Phone validation (10 digits) - only check if provided
+  if (formData.phone?.trim() && !validatePhone10Digits(formData.phone)) {
+    errors.phone = 'Phone must be 10 digits (e.g., 9876543210)';
+  }
+  if (formData.ownerPhone?.trim() && !validatePhone10Digits(formData.ownerPhone)) {
+    errors.ownerPhone = 'Phone must be 10 digits (e.g., 9876543210)';
+  }
+  if (formData.receptionistPhone?.trim() && !validatePhone10Digits(formData.receptionistPhone)) {
+    errors.receptionistPhone = 'Phone must be 10 digits (e.g., 9876543210)';
   }
 
-  // Postal code validation
-  if (formData.postal && !validatePostalCode(formData.postal)) {
+  // GST validation - only check if provided
+  if (formData.gstNumber?.trim() && !validateGST(formData.gstNumber)) {
+    errors.gstNumber = 'Invalid GST format (5-char state + 10 alphanumeric + Z + check digit)';
+  }
+
+  // Card expiry validation - only check if provided
+  if (formData.cardExpiry?.trim() && !validateCardExpiry(formData.cardExpiry)) {
+    errors.cardExpiry = 'Invalid expiry date (use MM/YY format)';
+  }
+
+  // Postal code validation - only check if provided
+  if (formData.postal?.trim() && !validatePostalCode(formData.postal)) {
     errors.postal = 'Postal code must be 6 digits';
   }
 

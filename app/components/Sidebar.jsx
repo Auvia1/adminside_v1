@@ -7,12 +7,8 @@ import useAuth from "@/app/hooks/useAuth";
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const { clinic, logout, isAuthenticated } = useAuth();
+  const { clinic, logout } = useAuth();
   const isActive = (href) => pathname === href;
-
-  if (!isAuthenticated) {
-    return null; // Don't show sidebar on login page
-  }
 
   return (
     <aside className="flex min-h-screen w-64 flex-col border-r border-slate-200 bg-white px-4 py-6">
@@ -28,9 +24,9 @@ export default function Sidebar() {
 
       <nav className="mt-6 space-y-1 text-sm text-slate-600">
         <Link
-          href="/dashboard"
+          href="/"
           className={`flex w-full items-center gap-2 rounded-xl px-3 py-2 font-semibold transition hover:-translate-y-0.5 ${
-            isActive("/dashboard")
+            isActive("/")
               ? "bg-(--brand-primary)/10 text-(--brand-primary)"
               : "text-slate-500 hover:bg-slate-100"
           }`}
@@ -67,17 +63,19 @@ export default function Sidebar() {
           </div>
           <div className="min-w-0">
             <p className="truncate text-xs font-semibold">{clinic?.name || "Admin"}</p>
-            <p className="text-[10px] text-slate-400">Clinic</p>
+            <p className="text-[10px] text-slate-400">{clinic ? "Clinic" : "Not logged in"}</p>
           </div>
         </div>
 
-        {/* Logout Button */}
-        <button
-          onClick={logout}
-          className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold text-slate-500 transition hover:bg-red-50 hover:text-red-600"
-        >
-          <LogOut className="h-4 w-4" /> Logout
-        </button>
+        {/* Logout Button - Show only when clinic/logged in */}
+        {clinic && (
+          <button
+            onClick={logout}
+            className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold text-slate-500 transition hover:bg-red-50 hover:text-red-600"
+          >
+            <LogOut className="h-4 w-4" /> Logout
+          </button>
+        )}
       </div>
     </aside>
   );

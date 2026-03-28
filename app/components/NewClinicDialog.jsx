@@ -426,23 +426,29 @@ export default function NewClinicDialog({ triggerClassName }) {
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <label className="text-xs font-semibold text-slate-500">Plan</label>
-                  <Input
-                    value={form.plan}
-                    onChange={updateField("plan")}
-                    placeholder="Starter / Growth / Enterprise"
-                  />
+                  <select value={form.plan} onChange={updateField("plan")} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm">
+                    <option value="">Select a plan</option>
+                    <option value="starter">Starter</option>
+                    <option value="growth">Growth</option>
+                    <option value="enterprise">Enterprise</option>
+                  </select>
                 </div>
                 <div className="space-y-2">
                   <label className="text-xs font-semibold text-slate-500">Billing Cycle</label>
-                  <Input value={form.billingCycle} onChange={updateField("billingCycle")} />
+                  <select value={form.billingCycle} onChange={updateField("billingCycle")} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm">
+                    <option value="monthly">Monthly</option>
+                    <option value="quarterly">Quarterly</option>
+                    <option value="annually">Annually</option>
+                  </select>
                 </div>
                 <div className="space-y-2 md:col-span-2">
                   <label className="text-xs font-semibold text-slate-500">Payment Method</label>
-                  <Input
-                    value={form.paymentMethod}
-                    onChange={updateField("paymentMethod")}
-                    placeholder="Card / UPI / Bank Transfer"
-                  />
+                  <select value={form.paymentMethod} onChange={updateField("paymentMethod")} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm">
+                    <option value="">Select payment method</option>
+                    <option value="card">Card</option>
+                    <option value="upi">UPI</option>
+                    <option value="bank_transfer">Bank Transfer</option>
+                  </select>
                 </div>
                 <div className="space-y-2">
                   <label className="text-xs font-semibold text-slate-500">Card Number</label>
