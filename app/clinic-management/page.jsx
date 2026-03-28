@@ -26,6 +26,7 @@ import { Card } from "../components/ui/card";
 import { Switch } from "../components/ui/switch";
 import { Input } from "../components/ui/input";
 import NewPhoneNumberDialog from "../components/NewPhoneNumberDialog";
+import NewDoctorDialog from "../components/NewDoctorDialog";
 import ErrorMessage from "../components/ErrorMessage";
 import SuccessMessage from "../components/SuccessMessage";
 import LoadingSpinner from "../components/LoadingSpinner";
@@ -131,6 +132,7 @@ export default function ClinicManagementPage() {
   const [selectedClinicData, setSelectedClinicData] = useState(null);
   const [settings, setSettings] = useState(defaultSettings);
   const [phoneNumbers, setPhoneNumbers] = useState([]);
+  const [doctors, setDoctors] = useState([]);
 
   const [isLoadingClinics, setIsLoadingClinics] = useState(true);
   const [isLoadingClinicData, setIsLoadingClinicData] = useState(false);
@@ -188,20 +190,28 @@ export default function ClinicManagementPage() {
       setIsLoadingClinicData(true);
       setPageError("");
 
-      const response = await apiGet(`/clinics/${clinicId}/settings`);
+      const [response, phoneResponse, doctorResponse] = await Promise.all([
+        apiGet(`/clinics/${clinicId}/settings`),
+        apiGet(`/phone-numbers?clinic_id=${clinicId}`),
+        apiGet(`/doctors?clinic_id=${clinicId}`),
+      ]);
       if (!response?.success) {
         throw new Error(response?.error || "Unable to fetch clinic settings");
       }
-
-      const phoneResponse = await apiGet(`/phone-numbers?clinic_id=${clinicId}`);
       if (!phoneResponse?.success) {
         throw new Error(phoneResponse?.error || "Unable to fetch phone numbers");
+      }
+      if (!doctorResponse?.success) {
+        throw new Error(doctorResponse?.error || "Unable to fetch doctors");
       }
 
       const clinicPayload = response?.data?.clinic || null;
       const settingsPayload = response?.data?.settings || null;
       const phonePayload = Array.isArray(phoneResponse?.data)
         ? phoneResponse.data
+        : [];
+      const doctorPayload = Array.isArray(doctorResponse?.data)
+        ? doctorResponse.data
         : [];
 
       setSelectedClinicData(clinicPayload);
@@ -214,11 +224,22 @@ export default function ClinicManagementPage() {
           status: item.status || (item.is_active ? "Live" : "Inactive"),
         }))
       );
+      setDoctors(
+        doctorPayload.map((item) => ({
+          id: item.id,
+          name: item.name,
+          speciality: item.speciality || "General",
+          consultationDuration: item.consultation_duration_minutes || 30,
+          maxAppointmentsPerDay: item.max_appointments_per_day || 0,
+          isActive: Boolean(item.is_active),
+        }))
+      );
     } catch (error) {
       setPageError(error.message || "Failed to load clinic details.");
       setSelectedClinicData(null);
       setSettings(defaultSettings);
       setPhoneNumbers([]);
+      setDoctors([]);
     } finally {
       setIsLoadingClinicData(false);
     }
@@ -284,6 +305,10 @@ export default function ClinicManagementPage() {
 
   const handleCreatePhoneNumber = (phoneNumberData) => {
     setPhoneNumbers((prev) => [phoneNumberData, ...prev]);
+  };
+
+  const handleCreateDoctor = (doctorData) => {
+    setDoctors((prev) => [doctorData, ...prev]);
   };
 
   return (
@@ -607,6 +632,61 @@ export default function ClinicManagementPage() {
                 );
               })}
             </div>
+          </div>
+        </Card>
+      </div>
+
+      <div className="mt-6">
+        <Card className="p-5">
+          <SectionHeader
+            icon={ShieldCheck}
+            title="Doctors"
+            action={
+              <div className="flex items-center gap-3">
+                <div className="text-right text-xs text-slate-400">
+                  <p className="text-[10px] uppercase">Total Doctors</p>
+                  <p className="text-sm font-semibold text-slate-800">{doctors.length}</p>
+                </div>
+                <NewDoctorDialog
+                  clinicId={selectedClinicId}
+                  onCreate={handleCreateDoctor}
+                  triggerClassName="h-9 rounded-xl bg-(--brand-primary) px-4 text-xs font-semibold text-white shadow-[0_12px_24px_rgba(15,102,118,0.2)] transition hover:-translate-y-0.5"
+                />
+              </div>
+            }
+          />
+
+          <p className="mt-1 text-xs text-slate-400">All active doctors configured for this clinic.</p>
+
+          <div className="mt-4 space-y-2 rounded-2xl border border-slate-100 bg-white p-3">
+            <div className="grid grid-cols-[1.4fr_1fr_0.8fr_0.7fr_0.4fr] text-[10px] uppercase text-slate-400">
+              <span>Name</span>
+              <span>Speciality</span>
+              <span>Duration</span>
+              <span>Max/Day</span>
+              <span>Status</span>
+            </div>
+
+            {doctors.map((doctor) => (
+              <div
+                key={doctor.id}
+                className="grid grid-cols-[1.4fr_1fr_0.8fr_0.7fr_0.4fr] items-center rounded-xl px-2 py-2 text-xs text-slate-600 transition hover:bg-slate-50"
+              >
+                <span className="font-semibold text-slate-700">{doctor.name}</span>
+                <span>{doctor.speciality}</span>
+                <span>{doctor.consultationDuration} min</span>
+                <span>{doctor.maxAppointmentsPerDay}</span>
+                <Badge className={doctor.isActive ? "w-fit bg-emerald-50 text-emerald-600" : "w-fit bg-slate-100 text-slate-500"}>
+                  {doctor.isActive ? "Active" : "Inactive"}
+                </Badge>
+              </div>
+            ))}
+
+            {doctors.length === 0 ? (
+              <div className="rounded-xl bg-slate-50 px-3 py-2 text-xs text-slate-500">
+                No doctors found for this clinic.
+              </div>
+            ) : null}
           </div>
         </Card>
       </div>
