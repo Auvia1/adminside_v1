@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useMemo, useCallback, useEffect, useState } from "react";
 import {
   Bell,
   ChevronDown,
@@ -11,7 +11,6 @@ import {
   Bot,
   Languages,
   MessageCircle,
-  ImageIcon,
   Check,
   Settings,
   ShieldCheck,
@@ -19,6 +18,7 @@ import {
   Sparkles,
   Save,
   TimerReset,
+  Upload,
 } from "lucide-react";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
@@ -31,6 +31,7 @@ import ErrorMessage from "../components/ErrorMessage";
 import SuccessMessage from "../components/SuccessMessage";
 import LoadingSpinner from "../components/LoadingSpinner";
 import { apiGet, apiPatch } from "../lib/api";
+import { uploadDocuments } from "../lib/documentUpload";
 
 const defaultSettings = {
   advance_booking_days: 30,
@@ -39,9 +40,9 @@ const defaultSettings = {
   ai_agent_enabled: true,
   ai_agent_languages: ["en-IN"],
   whatsapp_number: "",
-  logo_url: "",
   followup_time: "09:00",
   price_per_appointment: 500,
+  documents: [],
 };
 
 const languageOptions = [
@@ -89,9 +90,9 @@ function normalizeSettings(rawSettings) {
       ? rawSettings.ai_agent_languages
       : ["en-IN"],
     whatsapp_number: rawSettings.whatsapp_number || "",
-    logo_url: rawSettings.logo_url || "",
     followup_time: normalizeTime(rawSettings.followup_time),
     price_per_appointment: Number(rawSettings.price_per_appointment ?? 0),
+    documents: Array.isArray(rawSettings.documents) ? rawSettings.documents : [],
   };
 }
 
@@ -263,11 +264,6 @@ export default function ClinicManagementPage() {
       setPageError("");
       setSavedMessage("");
 
-      const cleanedLogoUrl = String(settings.logo_url || "").trim();
-      if (cleanedLogoUrl && !cleanedLogoUrl.startsWith("https://")) {
-        throw new Error("Logo URL must start with https://");
-      }
-
       const whatsappDigits = String(settings.whatsapp_number || "")
         .replace(/\D/g, "")
         .trim();
@@ -284,8 +280,6 @@ export default function ClinicManagementPage() {
         ai_agent_languages: settings.ai_agent_languages || ["en-IN"],
         // DB constraint expects null or a 10-15 digit numeric string.
         whatsapp_number: whatsappDigits || null,
-        // DB constraint expects null or a valid https URL.
-        logo_url: cleanedLogoUrl || null,
         price_per_appointment: Number(settings.price_per_appointment || 0),
       };
 
@@ -434,96 +428,148 @@ export default function ClinicManagementPage() {
                 />
               </div>
             </div>
+          </div>
+        </Card>
 
-            <div className="space-y-1.5">
-              <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-[0.1em] text-slate-400">
-                <ImageIcon className="h-3 w-3" /> Logo URL
-              </div>
-              <Input
-                value={settings.logo_url}
-                onChange={(event) => update("logo_url", event.target.value)}
-                placeholder="https://cdn.example.com/logo.png"
-                className="h-8 rounded-xl text-xs text-slate-600"
-              />
+        <div className="flex flex-col gap-4">
+          <Card className="p-5">
+            <SectionHeader icon={CalendarDays} title="Booking Rules" />
+            <div className="mt-4 space-y-3">
+              <SettingRow
+                icon={CalendarDays}
+                label="Advance Booking"
+                sublabel="How far ahead patients can book"
+              >
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    min={10}
+                    max={90}
+                    value={settings.advance_booking_days}
+                    onChange={(event) => update("advance_booking_days", Number(event.target.value))}
+                    className="h-8 w-16 rounded-xl text-center text-xs"
+                  />
+                  <span className="text-xs text-slate-400">days</span>
+                </div>
+              </SettingRow>
+
+              <SettingRow
+                icon={Clock}
+                label="Min Notice Period"
+                sublabel="Minimum lead time before appointment"
+              >
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    min={0}
+                    max={360}
+                    value={settings.min_booking_notice_period}
+                    onChange={(event) =>
+                      update("min_booking_notice_period", Number(event.target.value))
+                    }
+                    className="h-8 w-16 rounded-xl text-center text-xs"
+                  />
+                  <span className="text-xs text-slate-400">min</span>
+                </div>
+              </SettingRow>
+
+              <SettingRow
+                icon={Ban}
+                label="Cancellation Window"
+                sublabel="Latest a patient can cancel"
+              >
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    min={0}
+                    max={168}
+                    value={settings.cancellation_window_hours}
+                    onChange={(event) =>
+                      update("cancellation_window_hours", Number(event.target.value))
+                    }
+                    className="h-8 w-16 rounded-xl text-center text-xs"
+                  />
+                  <span className="text-xs text-slate-400">hrs</span>
+                </div>
+              </SettingRow>
+
+              <SettingRow
+                icon={TimerReset}
+                label="Follow-up Time"
+                sublabel="Daily time to send follow-up messages"
+              >
+                <Input
+                  type="time"
+                  value={settings.followup_time}
+                  onChange={(event) => update("followup_time", event.target.value)}
+                  className="h-8 w-28 rounded-xl text-xs"
+                />
+              </SettingRow>
             </div>
-          </div>
-        </Card>
+          </Card>
 
-        <Card className="p-5">
-          <SectionHeader icon={CalendarDays} title="Booking Rules" />
-          <div className="mt-4 space-y-3">
-            <SettingRow
-              icon={CalendarDays}
-              label="Advance Booking"
-              sublabel="How far ahead patients can book"
-            >
-              <div className="flex items-center gap-2">
-                <Input
-                  type="number"
-                  min={10}
-                  max={90}
-                  value={settings.advance_booking_days}
-                  onChange={(event) => update("advance_booking_days", Number(event.target.value))}
-                  className="h-8 w-16 rounded-xl text-center text-xs"
+          <Card className="p-5">
+            <SectionHeader
+              icon={Upload}
+              title="Documents"
+              action={
+                <div className="text-right text-xs text-slate-400">
+                  <p className="text-[10px] uppercase">Total Files</p>
+                  <p className="text-sm font-semibold text-slate-800">{settings.documents?.length || 0}</p>
+                </div>
+              }
+            />
+            <div className="mt-4 space-y-3">
+              <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-8 text-sm text-slate-500 transition hover:border-(--brand-primary)/50 hover:bg-(--brand-primary)/5">
+                <Upload className="h-5 w-5 text-(--brand-primary)" />
+                <span className="font-semibold">Upload Documents</span>
+                <span className="text-[11px] text-slate-400">License, certificates, approvals, etc.</span>
+                <input
+                  type="file"
+                  multiple
+                  className="hidden"
+                  onChange={async (event) => {
+                    const files = Array.from(event.target.files || []);
+
+                    if (files.length === 0) {
+                      return;
+                    }
+
+                    try {
+                      setIsSaving(true);
+                      setPageError("");
+                      const savedFiles = await uploadDocuments(files, selectedClinicId);
+                      setSettings((prev) => ({
+                        ...prev,
+                        documents: [...(prev.documents || []), ...savedFiles],
+                      }));
+                      setSavedMessage("Documents uploaded successfully.");
+                      setTimeout(() => setSavedMessage(""), 2500);
+                    } catch (error) {
+                      setPageError(error.message || "Failed to upload documents.");
+                    } finally {
+                      setIsSaving(false);
+                      event.target.value = "";
+                    }
+                  }}
                 />
-                <span className="text-xs text-slate-400">days</span>
-              </div>
-            </SettingRow>
-
-            <SettingRow
-              icon={Clock}
-              label="Min Notice Period"
-              sublabel="Minimum lead time before appointment"
-            >
-              <div className="flex items-center gap-2">
-                <Input
-                  type="number"
-                  min={0}
-                  max={360}
-                  value={settings.min_booking_notice_period}
-                  onChange={(event) =>
-                    update("min_booking_notice_period", Number(event.target.value))
-                  }
-                  className="h-8 w-16 rounded-xl text-center text-xs"
-                />
-                <span className="text-xs text-slate-400">min</span>
-              </div>
-            </SettingRow>
-
-            <SettingRow
-              icon={Ban}
-              label="Cancellation Window"
-              sublabel="Latest a patient can cancel"
-            >
-              <div className="flex items-center gap-2">
-                <Input
-                  type="number"
-                  min={0}
-                  max={168}
-                  value={settings.cancellation_window_hours}
-                  onChange={(event) =>
-                    update("cancellation_window_hours", Number(event.target.value))
-                  }
-                  className="h-8 w-16 rounded-xl text-center text-xs"
-                />
-                <span className="text-xs text-slate-400">hrs</span>
-              </div>
-            </SettingRow>
-
-            <SettingRow
-              icon={TimerReset}
-              label="Follow-up Time"
-              sublabel="Daily time to send follow-up messages"
-            >
-              <Input
-                type="time"
-                value={settings.followup_time}
-                onChange={(event) => update("followup_time", event.target.value)}
-                className="h-8 w-28 rounded-xl text-xs"
-              />
-            </SettingRow>
-          </div>
-        </Card>
+              </label>
+              {settings.documents?.length > 0 ? (
+                <div className="space-y-2">
+                  <p className="text-[10px] uppercase text-slate-400">Uploaded Files</p>
+                  <div className="space-y-1">
+                    {settings.documents.map((file) => (
+                      <div key={file.savedAs || file.path || file.name || file} className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50 px-3 py-2 text-xs text-slate-600">
+                        <span className="truncate">{typeof file === "string" ? file : file.name}</span>
+                        <Check className="h-4 w-4 text-emerald-500 flex-shrink-0" />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          </Card>
+        </div>
       </div>
 
       <div className="mt-6 grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">

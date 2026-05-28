@@ -40,12 +40,12 @@ function toIstIso(localDateTime) {
   return `${normalized}+05:30`;
 }
 
-function makeDefaultSchedule() {
+function makeDefaultSchedule(consultationDurationMinutes = 30) {
   return {
     day_of_week: 1,
     start_time: "09:00",
     end_time: "17:00",
-    slot_duration_minutes: 30,
+    slot_duration_minutes: consultationDurationMinutes,
     effective_from: "",
     effective_to: "",
   };
@@ -73,7 +73,7 @@ export default function NewDoctorDialog({ clinicId, onCreate, triggerClassName }
     buffer_time_minutes: 0,
     max_appointments_per_day: 10,
   });
-  const [schedules, setSchedules] = useState([makeDefaultSchedule()]);
+  const [schedules, setSchedules] = useState([makeDefaultSchedule(doctorForm.consultation_duration_minutes)]);
   const [timeOffs, setTimeOffs] = useState([]);
 
   const isFirst = step === 0;
@@ -91,12 +91,21 @@ export default function NewDoctorDialog({ clinicId, onCreate, triggerClassName }
       buffer_time_minutes: 0,
       max_appointments_per_day: 10,
     });
-    setSchedules([makeDefaultSchedule()]);
+    setSchedules([makeDefaultSchedule(30)]);
     setTimeOffs([]);
   }
 
   function updateDoctor(field, value) {
     setDoctorForm((prev) => ({ ...prev, [field]: value }));
+    // When consultation duration changes, update all schedules' slot duration
+    if (field === "consultation_duration_minutes") {
+      setSchedules((prev) =>
+        prev.map((schedule) => ({
+          ...schedule,
+          slot_duration_minutes: Number(value),
+        }))
+      );
+    }
   }
 
   function updateSchedule(index, field, value) {
@@ -382,15 +391,11 @@ export default function NewDoctorDialog({ clinicId, onCreate, triggerClassName }
                       </div>
 
                       <div className="space-y-1">
-                        <label className="text-[11px] font-semibold text-slate-500">Slot Duration (min) *</label>
-                        <Input
-                          type="number"
-                          min={1}
-                          value={schedule.slot_duration_minutes}
-                          onChange={(event) =>
-                            updateSchedule(index, "slot_duration_minutes", Number(event.target.value))
-                          }
-                        />
+                        <label className="text-[11px] font-semibold text-slate-500">Slot Duration (min)</label>
+                        <div className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 flex items-center text-sm text-slate-700">
+                          {schedule.slot_duration_minutes}
+                        </div>
+                        <p className="text-[10px] text-slate-400">Matches consultation duration ({doctorForm.consultation_duration_minutes} min)</p>
                       </div>
 
                       <div className="space-y-1">
@@ -416,7 +421,7 @@ export default function NewDoctorDialog({ clinicId, onCreate, triggerClassName }
 
                 <Button
                   variant="outline"
-                  onClick={() => setSchedules((prev) => [...prev, makeDefaultSchedule()])}
+                  onClick={() => setSchedules((prev) => [...prev, makeDefaultSchedule(doctorForm.consultation_duration_minutes)])}
                   className="h-9 text-xs"
                 >
                   <Plus className="h-4 w-4" /> Add Another Schedule

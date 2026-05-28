@@ -17,6 +17,7 @@ import ErrorMessage from "./ErrorMessage";
 import SuccessMessage from "./SuccessMessage";
 import LoadingSpinner from "./LoadingSpinner";
 import { validateRegistrationForm } from "@/app/utils/validation";
+import { uploadDocuments } from "@/app/lib/documentUpload";
 
 const steps = [
   "Basic Details",
@@ -105,9 +106,24 @@ export default function NewClinicDialog({ triggerClassName }) {
     }
   };
 
-  const handleFileChange = (event) => {
+  const handleFileChange = async (event) => {
     const files = Array.from(event.target.files || []);
-    setForm((prev) => ({ ...prev, documents: files }));
+
+    if (files.length === 0) {
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      setSubmitError("");
+      const savedFiles = await uploadDocuments(files, form.email);
+      setForm((prev) => ({ ...prev, documents: [...prev.documents, ...savedFiles] }));
+    } catch (error) {
+      setSubmitError(error.message || "Failed to upload documents.");
+    } finally {
+      setIsSubmitting(false);
+      event.target.value = "";
+    }
   };
 
   const handleSubmit = async () => {
@@ -125,16 +141,12 @@ export default function NewClinicDialog({ triggerClassName }) {
     setIsSubmitting(true);
 
     try {
-      // Prepare payload for API
-      // NOTE: File uploads are skipped for now (placeholder prepared)
-      const documentPayload = form.documents.length
-        ? form.documents.map((file) => ({
-            name: file.name,
-            url: "", // Would be cloud storage URL
-            type: file.type,
-            docType: "clinic_license", // Could be inferred from filename
-          }))
-        : [];
+      const documentPayload = form.documents.map((file) => ({
+        name: file.name,
+        url: file.path,
+        type: file.type,
+        size: file.size,
+      }));
 
       const payload = {
         clinicName: form.clinicName,
@@ -588,7 +600,7 @@ export default function NewClinicDialog({ triggerClassName }) {
                 {form.documents.length ? (
                   <div className="space-y-1 text-xs text-slate-500">
                     {form.documents.map((file) => (
-                      <div key={file.name} className="flex items-center gap-2">
+                      <div key={file.savedAs || file.path || file.name} className="flex items-center gap-2">
                         <CheckCircle2 className="h-4 w-4 text-emerald-500" />
                         {file.name}
                       </div>
