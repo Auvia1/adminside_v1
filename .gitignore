@@ -23,6 +23,8 @@
 # misc
 .DS_Store
 *.pem
+*-credentials*.json
+ai-receptionist-tts-*.json
 
 # debug
 npm-debug.log*
