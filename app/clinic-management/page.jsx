@@ -19,6 +19,7 @@ import {
   Save,
   TimerReset,
   Upload,
+  Trash2,
 } from "lucide-react";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
@@ -134,6 +135,8 @@ export default function ClinicManagementPage() {
   const [settings, setSettings] = useState(defaultSettings);
   const [phoneNumbers, setPhoneNumbers] = useState([]);
   const [doctors, setDoctors] = useState([]);
+  const [totalFiles, setTotalFiles] = useState(0);
+  const [documents, setDocuments] = useState([]);
 
   const [isLoadingClinics, setIsLoadingClinics] = useState(true);
   const [isLoadingClinicData, setIsLoadingClinicData] = useState(false);
@@ -191,10 +194,11 @@ export default function ClinicManagementPage() {
       setIsLoadingClinicData(true);
       setPageError("");
 
-      const [response, phoneResponse, doctorResponse] = await Promise.all([
+      const [response, phoneResponse, doctorResponse, documentsResponse] = await Promise.all([
         apiGet(`/clinics/${clinicId}/settings`),
         apiGet(`/phone-numbers?clinic_id=${clinicId}`),
         apiGet(`/doctors?clinic_id=${clinicId}`),
+        fetch(`/api/documents?clinic_id=${clinicId}&limit=100`).then(r => r.json()),
       ]);
       if (!response?.success) {
         throw new Error(response?.error || "Unable to fetch clinic settings");
@@ -214,9 +218,13 @@ export default function ClinicManagementPage() {
       const doctorPayload = Array.isArray(doctorResponse?.data)
         ? doctorResponse.data
         : [];
+      const documentsPayload = documentsResponse?.success ? Array.isArray(documentsResponse?.data) ? documentsResponse.data : [] : [];
+      const filesCount = documentsResponse?.pagination?.total || documentsPayload.length || 0;
 
       setSelectedClinicData(clinicPayload);
       setSettings(normalizeSettings(settingsPayload));
+      setTotalFiles(filesCount);
+      setDocuments(documentsPayload);
       setPhoneNumbers(
         phonePayload.map((item) => ({
           id: item.id,
@@ -241,6 +249,8 @@ export default function ClinicManagementPage() {
       setSettings(defaultSettings);
       setPhoneNumbers([]);
       setDoctors([]);
+      setDocuments([]);
+      setTotalFiles(0);
     } finally {
       setIsLoadingClinicData(false);
     }
@@ -303,6 +313,27 @@ export default function ClinicManagementPage() {
 
   const handleCreateDoctor = (doctorData) => {
     setDoctors((prev) => [doctorData, ...prev]);
+  };
+
+  const handleDeleteDocument = async (docId, docName) => {
+    if (!window.confirm(`Delete "${docName}"?`)) return;
+
+    try {
+      setPageError("");
+      const response = await fetch(`/api/documents/${docId}`, { method: "DELETE" });
+      const data = await response.json();
+
+      if (!data.success) {
+        throw new Error(data.error || "Failed to delete document");
+      }
+
+      setDocuments((prev) => prev.filter((doc) => doc.id !== docId));
+      setTotalFiles((prev) => Math.max(0, prev - 1));
+      setSavedMessage("Document deleted successfully.");
+      setTimeout(() => setSavedMessage(""), 2500);
+    } catch (error) {
+      setPageError(error.message || "Failed to delete document.");
+    }
   };
 
   return (
@@ -515,7 +546,7 @@ export default function ClinicManagementPage() {
               action={
                 <div className="text-right text-xs text-slate-400">
                   <p className="text-[10px] uppercase">Total Files</p>
-                  <p className="text-sm font-semibold text-slate-800">{settings.documents?.length || 0}</p>
+                  <p className="text-sm font-semibold text-slate-800">{totalFiles}</p>
                 </div>
               }
             />
@@ -539,10 +570,14 @@ export default function ClinicManagementPage() {
                       setIsSaving(true);
                       setPageError("");
                       const savedFiles = await uploadDocuments(files, selectedClinicId);
-                      setSettings((prev) => ({
-                        ...prev,
-                        documents: [...(prev.documents || []), ...savedFiles],
-                      }));
+
+                      // Refresh documents and count from database
+                      const docsResponse = await fetch(`/api/documents?clinic_id=${selectedClinicId}&limit=100`).then(r => r.json());
+                      if (docsResponse?.success) {
+                        setDocuments(Array.isArray(docsResponse?.data) ? docsResponse.data : []);
+                        setTotalFiles(docsResponse?.pagination?.total || 0);
+                      }
+
                       setSavedMessage("Documents uploaded successfully.");
                       setTimeout(() => setSavedMessage(""), 2500);
                     } catch (error) {
@@ -554,14 +589,28 @@ export default function ClinicManagementPage() {
                   }}
                 />
               </label>
-              {settings.documents?.length > 0 ? (
+              {documents?.length > 0 ? (
                 <div className="space-y-2">
-                  <p className="text-[10px] uppercase text-slate-400">Uploaded Files</p>
-                  <div className="space-y-1">
-                    {settings.documents.map((file) => (
-                      <div key={file.savedAs || file.path || file.name || file} className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50 px-3 py-2 text-xs text-slate-600">
-                        <span className="truncate">{typeof file === "string" ? file : file.name}</span>
-                        <Check className="h-4 w-4 text-emerald-500 flex-shrink-0" />
+                  <p className="text-[10px] uppercase text-slate-400">Uploaded Files ({documents.length})</p>
+                  <div className="space-y-1 max-h-48 overflow-y-auto">
+                    {documents.map((doc) => (
+                      <div key={doc.id} className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50 px-3 py-2 text-xs text-slate-600 hover:bg-slate-100 transition group">
+                        <div className="flex-1 min-w-0">
+                          <div className="truncate font-medium text-slate-700">{doc.file_name}</div>
+                          <div className="text-[10px] text-slate-400">
+                            {doc.file_size ? `${(doc.file_size / 1024).toFixed(2)} KB` : 'Unknown size'} • {doc.doc_type || 'misc'}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+                          <Check className="h-4 w-4 text-emerald-500" />
+                          <button
+                            onClick={() => handleDeleteDocument(doc.id, doc.file_name)}
+                            className="text-slate-300 hover:text-red-500 transition opacity-0 group-hover:opacity-100"
+                            title="Delete document"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>

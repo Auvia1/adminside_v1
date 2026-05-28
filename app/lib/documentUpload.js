@@ -9,12 +9,15 @@ export async function uploadDocuments(files, clinicId) {
   }
 
   const formData = new FormData();
+  formData.append("clinic_id", clinicId);
+  formData.append("doc_type", "misc");
+
   selectedFiles.forEach((file) => {
     console.log(`📁 [CLIENT] Adding file to FormData: ${file.name} (${file.type}, ${file.size} bytes)`);
     formData.append("files", file);
   });
 
-  console.log("📤 [CLIENT] Sending files to /api/upload-documents...");
+  console.log(`📤 [CLIENT] Sending files to /api/upload-documents... (clinic_id: ${clinicId})`);
   const response = await fetch("/api/upload-documents", {
     method: "POST",
     body: formData,

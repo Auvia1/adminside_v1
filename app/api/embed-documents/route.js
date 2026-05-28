@@ -196,6 +196,7 @@ export async function POST(request) {
         clinic_id: emb.clinic_id,
       }));
 
+      // Insert into clinic_knowledge
       const { data, error } = await supabase
         .from("clinic_knowledge")
         .insert(dbRecords);
@@ -208,7 +209,62 @@ export async function POST(request) {
         throw new Error(`Database error: ${error.message}`);
       }
 
-      console.log(`✅ [STEP 5] Successfully inserted ${embeddings.length} embeddings into Supabase`);
+      console.log(`✅ [STEP 5] Successfully inserted ${embeddings.length} embeddings into clinic_knowledge`);
+
+      // Also insert document metadata into clinic_documents
+      console.log(`💾 [STEP 5b] Inserting document metadata into clinic_documents...`);
+      const docMetadata = {
+        clinic_id: clinicId,
+        file_name: fileName,
+        file_size: fileContent.length,
+        file_type: "text/plain",
+        num_chunks: embeddings.length,
+        created_at: new Date(),
+      };
+
+      const { error: docError } = await supabase
+        .from("clinic_documents")
+        .insert([docMetadata]);
+
+      if (docError) {
+        console.warn(`⚠️ [STEP 5b] Document metadata insert warning:`, docError.message);
+      } else {
+        console.log(`✅ [STEP 5b] Document metadata saved to clinic_documents`);
+      }
+
+      // Update clinics table documents column
+      console.log(`💾 [STEP 5c] Updating clinics.documents column...`);
+      const docInfo = {
+        file_name: fileName,
+        file_size: fileContent.length,
+        num_chunks: embeddings.length,
+        created_at: new Date().toISOString(),
+      };
+
+      // Get current documents array
+      const { data: clinicData, error: fetchError } = await supabase
+        .from("clinics")
+        .select("documents")
+        .eq("id", clinicId)
+        .single();
+
+      if (fetchError) {
+        console.warn(`⚠️ [STEP 5c] Could not fetch clinic documents:`, fetchError.message);
+      } else {
+        const currentDocs = Array.isArray(clinicData?.documents) ? clinicData.documents : [];
+        const updatedDocs = [...currentDocs, docInfo];
+
+        const { error: updateError } = await supabase
+          .from("clinics")
+          .update({ documents: updatedDocs })
+          .eq("id", clinicId);
+
+        if (updateError) {
+          console.warn(`⚠️ [STEP 5c] Could not update clinic documents:`, updateError.message);
+        } else {
+          console.log(`✅ [STEP 5c] Updated clinics.documents column`);
+        }
+      }
     } catch (dbError) {
       console.error(`❌ [STEP 5] Database operation failed:`, dbError.message);
       throw new Error(`Database operation failed: ${dbError.message}`);
