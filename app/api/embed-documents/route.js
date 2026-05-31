@@ -5,6 +5,13 @@ export const runtime = "nodejs";
 const MAX_CHUNK_SIZE = 1000;
 const CHUNK_OVERLAP = 100;
 
+// Strip null bytes and non-printable control characters that PostgreSQL rejects
+function sanitizeText(text) {
+  if (!text) return "";
+  // Remove null bytes, and other C0/C1 control chars except \n \r \t
+  return text.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g, "");
+}
+
 // Lazy initialize to catch errors at runtime
 let genai = null;
 let supabase = null;
@@ -161,8 +168,12 @@ export async function POST(request) {
       );
     }
 
+    console.log(`✂️ [STEP 3] Sanitizing text content...`);
+    const sanitizedContent = sanitizeText(fileContent);
+    console.log(`✂️ [STEP 3] Sanitized content: ${sanitizedContent.length} chars (was ${fileContent.length})`);
+
     console.log(`✂️ [STEP 3] Chunking text with max size ${MAX_CHUNK_SIZE}...`);
-    const chunks = chunkText(fileContent);
+    const chunks = chunkText(sanitizedContent);
     console.log(`✂️ [STEP 3] Text split into ${chunks.length} chunks`);
 
     const embeddings = [];
@@ -191,7 +202,7 @@ export async function POST(request) {
     try {
       // Transform embeddings to match clinic_knowledge table schema
       const dbRecords = embeddings.map((emb) => ({
-        chunk_text: emb.chunk_text,
+        chunk_text: sanitizeText(emb.chunk_text),
         embedding: emb.embedding,
         clinic_id: emb.clinic_id,
       }));

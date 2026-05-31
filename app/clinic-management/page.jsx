@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useCallback, useEffect, useState } from "react";
+import { useMemo, useCallback, useEffect, useState, useRef } from "react";
 import {
   Bell,
   ChevronDown,
@@ -20,6 +20,12 @@ import {
   TimerReset,
   Upload,
   Trash2,
+  Brain,
+  Loader2,
+  CheckCircle2,
+  AlertCircle,
+  FileText,
+  X,
 } from "lucide-react";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
@@ -33,7 +39,6 @@ import SuccessMessage from "../components/SuccessMessage";
 import LoadingSpinner from "../components/LoadingSpinner";
 import ProtectedRoute from "../components/ProtectedRoute";
 import { apiGet, apiPatch } from "../lib/api";
-import { uploadDocuments } from "../lib/documentUpload";
 
 const defaultSettings = {
   advance_booking_days: 30,
@@ -152,6 +157,12 @@ function ClinicManagementPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [savedMessage, setSavedMessage] = useState("");
   const [pageError, setPageError] = useState("");
+
+  // Document upload + embedding state
+  const [uploadQueue, setUploadQueue] = useState([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
+  const fileInputRef = useRef(null);
 
   const update = (key, value) => {
     setSettings((prev) => ({ ...prev, [key]: value }));
@@ -342,6 +353,122 @@ function ClinicManagementPage() {
       setTimeout(() => setSavedMessage(""), 2500);
     } catch (error) {
       setPageError(error.message || "Failed to delete document.");
+    }
+  };
+
+  // ─── Document Upload + Embedding Handlers ─────────────────────────────────
+  const handleFilesSelected = (files) => {
+    const fileList = Array.from(files);
+    if (fileList.length === 0) return;
+    const newItems = fileList.map((file) => ({
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      file,
+      status: "idle",
+      message: "Ready to upload",
+    }));
+    setUploadQueue((prev) => [...prev, ...newItems]);
+  };
+
+  const handleFileInputChange = (event) => {
+    handleFilesSelected(event.target.files);
+    event.target.value = "";
+  };
+
+  const removeFromQueue = (id) => {
+    setUploadQueue((prev) => prev.filter((item) => item.id !== id));
+  };
+
+  const updateQueueItem = (id, status, message) => {
+    setUploadQueue((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, status, message } : item))
+    );
+  };
+
+  const handleUploadAndEmbed = async () => {
+    const pendingItems = uploadQueue.filter((q) => q.status === "idle" || q.status === "error");
+    if (pendingItems.length === 0 || !selectedClinicId) return;
+
+    setIsUploading(true);
+    setPageError("");
+    let successCount = 0;
+    let failCount = 0;
+
+    for (const item of pendingItems) {
+      try {
+        // Step 1: Upload to Google Cloud Storage
+        updateQueueItem(item.id, "uploading", "Uploading to cloud...");
+
+        const formData = new FormData();
+        formData.append("clinic_id", selectedClinicId);
+        formData.append("doc_type", "misc");
+        formData.append("files", item.file);
+
+        const uploadRes = await fetch("/api/upload-documents", {
+          method: "POST",
+          body: formData,
+        });
+        const uploadData = await uploadRes.json();
+
+        if (!uploadRes.ok || !uploadData.success) {
+          throw new Error(uploadData.error || "Cloud upload failed");
+        }
+
+        // Step 2: Extract text and generate embeddings
+        updateQueueItem(item.id, "embedding", "Creating embeddings...");
+
+        let fileContent = "";
+        try {
+          fileContent = await item.file.text();
+        } catch {
+          fileContent = `[File: ${item.file.name}] [Type: ${item.file.type}] [Size: ${item.file.size} bytes]`;
+        }
+
+        if (fileContent && fileContent.length > 10) {
+          const embedRes = await fetch("/api/embed-documents", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              clinicId: selectedClinicId,
+              fileName: item.file.name,
+              fileContent: fileContent,
+            }),
+          });
+          const embedData = await embedRes.json();
+
+          if (!embedRes.ok || !embedData.success) {
+            console.warn(`⚠️ Embedding failed for ${item.file.name}:`, embedData.error);
+            updateQueueItem(item.id, "success", `Uploaded (embedding skipped)`);
+          } else {
+            updateQueueItem(item.id, "success", `Uploaded & embedded (${embedData.chunks} chunks)`);
+          }
+        } else {
+          updateQueueItem(item.id, "success", "Uploaded (no text to embed)");
+        }
+
+        successCount++;
+      } catch (err) {
+        console.error(`❌ Failed to process ${item.file.name}:`, err);
+        updateQueueItem(item.id, "error", err.message || "Upload failed");
+        failCount++;
+      }
+    }
+
+    setIsUploading(false);
+
+    // Refresh documents list from database
+    try {
+      const docsResponse = await fetch(`/api/documents?clinic_id=${selectedClinicId}&limit=100`).then(r => r.json());
+      if (docsResponse?.success) {
+        setDocuments(Array.isArray(docsResponse?.data) ? docsResponse.data : []);
+        setTotalFiles(docsResponse?.pagination?.total || 0);
+      }
+    } catch {}
+
+    if (successCount > 0) {
+      setSavedMessage(`${successCount} document(s) uploaded & embedded${failCount > 0 ? ` (${failCount} failed)` : ""}`);
+      setTimeout(() => setSavedMessage(""), 3000);
+    } else if (failCount > 0) {
+      setPageError(`All ${failCount} document(s) failed to upload.`);
     }
   };
 
@@ -551,7 +678,7 @@ function ClinicManagementPage() {
           <Card className="p-5">
             <SectionHeader
               icon={Upload}
-              title="Documents"
+              title="Documents & Knowledge"
               action={
                 <div className="text-right text-xs text-slate-400">
                   <p className="text-[10px] uppercase">Total Files</p>
@@ -559,55 +686,129 @@ function ClinicManagementPage() {
                 </div>
               }
             />
+            <p className="mt-1 text-[11px] text-slate-400">Upload documents to create AI knowledge embeddings</p>
             <div className="mt-4 space-y-3">
-              <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-8 text-sm text-slate-500 transition hover:border-(--brand-primary)/50 hover:bg-(--brand-primary)/5">
-                <Upload className="h-5 w-5 text-(--brand-primary)" />
-                <span className="font-semibold">Upload Documents</span>
-                <span className="text-[11px] text-slate-400">License, certificates, approvals, etc.</span>
+              {/* Drop Zone */}
+              <div
+                onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                onDragLeave={(e) => { e.preventDefault(); setDragOver(false); }}
+                onDrop={(e) => { e.preventDefault(); setDragOver(false); handleFilesSelected(e.dataTransfer.files); }}
+                onClick={() => fileInputRef.current?.click()}
+                className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed px-4 py-8 text-sm transition-all duration-200 ${
+                  dragOver
+                    ? "border-(--brand-primary) bg-(--brand-primary)/5 scale-[1.01]"
+                    : "border-slate-200 bg-slate-50 hover:border-(--brand-primary)/50 hover:bg-(--brand-primary)/5"
+                }`}
+              >
+                <div className={`rounded-full p-2 transition-colors ${dragOver ? "bg-(--brand-primary)/10" : "bg-slate-100"}`}>
+                  <Upload className={`h-5 w-5 ${dragOver ? "text-(--brand-primary)" : "text-(--brand-primary)"}`} />
+                </div>
+                <span className="font-semibold text-slate-700">
+                  {dragOver ? "Drop files here" : "Upload Documents"}
+                </span>
+                <span className="text-[11px] text-slate-400">PDF, TXT, DOC — Files will be embedded for AI knowledge</span>
                 <input
+                  ref={fileInputRef}
                   type="file"
                   multiple
+                  accept=".pdf,.txt,.doc,.docx,.jpg,.jpeg,.png"
                   className="hidden"
-                  onChange={async (event) => {
-                    const files = Array.from(event.target.files || []);
-
-                    if (files.length === 0) {
-                      return;
-                    }
-
-                    try {
-                      setIsSaving(true);
-                      setPageError("");
-                      const savedFiles = await uploadDocuments(files, selectedClinicId);
-
-                      // Refresh documents and count from database
-                      const docsResponse = await fetch(`/api/documents?clinic_id=${selectedClinicId}&limit=100`).then(r => r.json());
-                      if (docsResponse?.success) {
-                        setDocuments(Array.isArray(docsResponse?.data) ? docsResponse.data : []);
-                        setTotalFiles(docsResponse?.pagination?.total || 0);
-                      }
-
-                      setSavedMessage("Documents uploaded successfully.");
-                      setTimeout(() => setSavedMessage(""), 2500);
-                    } catch (error) {
-                      setPageError(error.message || "Failed to upload documents.");
-                    } finally {
-                      setIsSaving(false);
-                      event.target.value = "";
-                    }
-                  }}
+                  onChange={handleFileInputChange}
                 />
-              </label>
+              </div>
+
+              {/* Upload Queue */}
+              {uploadQueue.length > 0 && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <p className="text-[10px] uppercase text-slate-400">
+                      {uploadQueue.length} file(s) queued
+                    </p>
+                    {!isUploading && (
+                      <button
+                        onClick={() => setUploadQueue([])}
+                        className="text-[10px] text-slate-400 hover:text-slate-600 transition-colors"
+                      >
+                        Clear all
+                      </button>
+                    )}
+                  </div>
+                  <div className="max-h-40 overflow-y-auto space-y-1 rounded-xl border border-slate-100 bg-white p-2">
+                    {uploadQueue.map((item) => (
+                      <div
+                        key={item.id}
+                        className="flex items-center gap-2 rounded-lg px-2.5 py-1.5 bg-slate-50/80 hover:bg-slate-50 transition-colors"
+                      >
+                        <FileText className="h-4 w-4 text-slate-400 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[11px] font-medium text-slate-700 truncate">{item.file.name}</p>
+                          <p className="text-[10px] text-slate-400">
+                            {item.file.size < 1024 * 1024
+                              ? `${(item.file.size / 1024).toFixed(1)} KB`
+                              : `${(item.file.size / (1024 * 1024)).toFixed(1)} MB`}
+                          </p>
+                        </div>
+                        {/* Status Badge */}
+                        <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold flex-shrink-0 ${
+                          item.status === "uploading" ? "bg-blue-50 text-blue-600" :
+                          item.status === "embedding" ? "bg-purple-50 text-purple-600" :
+                          item.status === "success" ? "bg-emerald-50 text-emerald-600" :
+                          item.status === "error" ? "bg-red-50 text-red-600" :
+                          "bg-slate-100 text-slate-500"
+                        }`}>
+                          {item.status === "uploading" && <Loader2 className="h-3 w-3 animate-spin" />}
+                          {item.status === "embedding" && <Brain className="h-3 w-3 animate-pulse" />}
+                          {item.status === "success" && <CheckCircle2 className="h-3 w-3" />}
+                          {item.status === "error" && <AlertCircle className="h-3 w-3" />}
+                          {item.message}
+                        </span>
+                        {(item.status === "idle" || item.status === "error") && !isUploading && (
+                          <button
+                            onClick={() => removeFromQueue(item.id)}
+                            className="p-0.5 text-slate-300 hover:text-slate-500 transition-colors"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Upload & Embed Button */}
+                  <button
+                    onClick={handleUploadAndEmbed}
+                    disabled={isUploading || uploadQueue.every((q) => q.status === "success")}
+                    className="w-full flex items-center justify-center gap-2 rounded-xl bg-(--brand-primary) px-4 py-2.5 text-xs font-semibold text-white shadow-[0_12px_24px_rgba(15,102,118,0.2)] transition hover:-translate-y-0.5 disabled:opacity-60 disabled:pointer-events-none"
+                  >
+                    {isUploading ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Uploading & Embedding...
+                      </>
+                    ) : (
+                      <>
+                        <Brain className="h-4 w-4" />
+                        Upload & Create Embeddings
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
+
+              {/* Existing Documents List */}
               {documents?.length > 0 ? (
                 <div className="space-y-2">
                   <p className="text-[10px] uppercase text-slate-400">Uploaded Files ({documents.length})</p>
                   <div className="space-y-1 max-h-48 overflow-y-auto">
                     {documents.map((doc) => (
                       <div key={doc.id} className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50 px-3 py-2 text-xs text-slate-600 hover:bg-slate-100 transition group">
-                        <div className="flex-1 min-w-0">
-                          <div className="truncate font-medium text-slate-700">{doc.file_name}</div>
-                          <div className="text-[10px] text-slate-400">
-                            {doc.file_size ? `${(doc.file_size / 1024).toFixed(2)} KB` : 'Unknown size'} • {doc.doc_type || 'misc'}
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                          <FileText className="h-4 w-4 text-slate-400 flex-shrink-0" />
+                          <div className="min-w-0">
+                            <div className="truncate font-medium text-slate-700">{doc.file_name}</div>
+                            <div className="text-[10px] text-slate-400">
+                              {doc.file_size ? `${(doc.file_size / 1024).toFixed(1)} KB` : 'Unknown size'} • {doc.doc_type || 'misc'}
+                            </div>
                           </div>
                         </div>
                         <div className="flex items-center gap-2 flex-shrink-0 ml-2">
