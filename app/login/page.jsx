@@ -10,7 +10,7 @@ import { AlertCircle, Loader } from 'lucide-react';
 export default function LoginPage() {
   const router = useRouter();
   const { login, isLoading } = useAuth();
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [touched, setTouched] = useState({});
@@ -19,9 +19,8 @@ export default function LoginPage() {
     e.preventDefault();
     setError('');
 
-    // Validation
-    if (!username.trim()) {
-      setError('Username is required');
+    if (!email.trim()) {
+      setError('Email is required');
       return;
     }
     if (!password) {
@@ -30,9 +29,8 @@ export default function LoginPage() {
     }
 
     try {
-      await login(username, password);
-      // Redirect to dashboard on success (handled by AuthContext)
-      router.push('/dashboard');
+      await login(email, password);
+      router.push('/Dashboard');
     } catch (err) {
       setError(err.message || 'Failed to login. Please try again.');
     }
@@ -41,16 +39,13 @@ export default function LoginPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-[#f6f9fb] px-4">
       <div className="w-full max-w-md">
-        {/* Header */}
         <div className="text-center">
           <h1 className="text-3xl font-bold text-slate-900">Auvia Admin</h1>
           <p className="mt-2 text-sm text-slate-500">Clinic Management System</p>
         </div>
 
-        {/* Form Card */}
         <div className="mt-8 rounded-2xl border border-slate-100 bg-white p-8 shadow-[0_16px_40px_rgba(15,23,42,0.08)]">
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Error Alert */}
             {error && (
               <div className="rounded-xl border border-red-200 bg-red-50 p-3 flex items-center gap-2 text-sm text-red-700">
                 <AlertCircle className="h-5 w-5 flex-shrink-0" />
@@ -58,23 +53,21 @@ export default function LoginPage() {
               </div>
             )}
 
-            {/* Username Field */}
             <div className="space-y-2">
               <label className="text-sm font-semibold text-slate-700">
-                Username
+                Email
               </label>
               <Input
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                onBlur={() => setTouched({ ...touched, username: true })}
-                placeholder="Enter your username"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                onBlur={() => setTouched({ ...touched, email: true })}
+                placeholder="Enter your email"
                 disabled={isLoading}
                 className="h-10"
               />
             </div>
 
-            {/* Password Field */}
             <div className="space-y-2">
               <label className="text-sm font-semibold text-slate-700">
                 Password
@@ -90,10 +83,9 @@ export default function LoginPage() {
               />
             </div>
 
-            {/* Submit Button */}
             <Button
               type="submit"
-              disabled={isLoading || !username || !password}
+              disabled={isLoading || !email || !password}
               className="mt-6 w-full h-10 rounded-xl bg-[var(--brand-primary)] text-white font-semibold hover:opacity-90 disabled:opacity-50"
             >
               {isLoading ? (
@@ -107,19 +99,17 @@ export default function LoginPage() {
             </Button>
           </form>
 
-          {/* Register Link */}
           <p className="mt-6 text-center text-sm text-slate-500">
             Don't have an account?{' '}
             <a
               href="/register"
               className="font-semibold text-[var(--brand-primary)] hover:underline"
             >
-              Register a clinic
+              Register here
             </a>
           </p>
         </div>
 
-        {/* Footer */}
         <p className="mt-8 text-center text-xs text-slate-400">
           © 2024 Auvia. All rights reserved.
         </p>

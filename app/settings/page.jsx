@@ -9,9 +9,18 @@ import { Input } from '@/app/components/ui/input';
 import LoadingSpinner from '@/app/components/LoadingSpinner';
 import ErrorMessage from '@/app/components/ErrorMessage';
 import SuccessMessage from '@/app/components/SuccessMessage';
+import ProtectedRoute from '@/app/components/ProtectedRoute';
 import { Lock } from 'lucide-react';
 
-export default function SettingsPage() {
+export default function SettingsPageWrapper() {
+  return (
+    <ProtectedRoute>
+      <SettingsPage />
+    </ProtectedRoute>
+  );
+}
+
+function SettingsPage() {
   const { clinic } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');

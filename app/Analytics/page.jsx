@@ -20,6 +20,7 @@ import {
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
 import { Card } from "../components/ui/card";
+import ProtectedRoute from "../components/ProtectedRoute";
 
 const metrics = [
   {
@@ -92,7 +93,15 @@ const rows = [
   },
 ];
 
-export default function AnalyticsPage() {
+export default function AnalyticsPageWrapper() {
+  return (
+    <ProtectedRoute>
+      <AnalyticsPage />
+    </ProtectedRoute>
+  );
+}
+
+function AnalyticsPage() {
   return (
     <div className="px-6 py-6">
       <div className="flex flex-wrap items-center justify-between gap-4">

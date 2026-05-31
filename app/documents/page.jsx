@@ -9,8 +9,17 @@ import { Button } from '@/app/components/ui/button';
 import LoadingSpinner from '@/app/components/LoadingSpinner';
 import ErrorMessage from '@/app/components/ErrorMessage';
 import SuccessMessage from '@/app/components/SuccessMessage';
+import ProtectedRoute from '@/app/components/ProtectedRoute';
 
-export default function DocumentsPage() {
+export default function DocumentsPageWrapper() {
+  return (
+    <ProtectedRoute>
+      <DocumentsPage />
+    </ProtectedRoute>
+  );
+}
+
+function DocumentsPage() {
   const { clinic } = useAuth();
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(false);

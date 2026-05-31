@@ -315,6 +315,7 @@ import { Card } from '../components/ui/card';
 import ErrorMessage from '../components/ErrorMessage';
 import LoadingSpinner from '../components/LoadingSpinner';
 import NewClinicDialog from '../components/NewClinicDialog';
+import ProtectedRoute from '../components/ProtectedRoute';
 import { apiGet } from '../lib/api';
 
 // ─── Config ────────────────────────────────────────────────────────────────
@@ -566,7 +567,15 @@ function ClinicMap() {
 }
 
 // ─── Main Dashboard ─────────────────────────────────────────────────────────
-export default function DashboardPage() {
+export default function DashboardPageWrapper() {
+  return (
+    <ProtectedRoute>
+      <DashboardPage />
+    </ProtectedRoute>
+  );
+}
+
+function DashboardPage() {
   const [dashboard, setDashboard] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');

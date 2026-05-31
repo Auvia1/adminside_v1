@@ -2,16 +2,16 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart3, Building2, ClipboardList, LogOut } from "lucide-react";
+import { BarChart3, Building2, ClipboardList, LogOut, Users } from "lucide-react";
 import useAuth from "@/app/hooks/useAuth";
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const { clinic, logout } = useAuth();
+  const { admin, logout } = useAuth();
   const isActive = (href) => pathname === href;
 
   return (
-    <aside className="flex min-h-screen w-64 flex-col border-r border-slate-200 bg-white px-4 py-6">
+    <aside className="fixed left-0 top-0 h-screen w-64 flex-col border-r border-slate-200 bg-white px-4 py-6 flex overflow-y-auto">
       <div className="flex items-center gap-3 px-2">
         <div className="flex h-11 w-11 items-center justify-center rounded-full bg-(--brand-primary)/10 text-(--brand-primary)">
           <span className="text-sm font-semibold">AA</span>
@@ -53,22 +53,32 @@ export default function Sidebar() {
         >
           <Building2 className="h-4 w-4" /> Clinic Management
         </Link>
+        {admin?.role === 'superadmin' && (
+          <Link
+            href="/admin/pending-registrations"
+            className={`flex w-full items-center gap-2 rounded-xl px-3 py-2 font-semibold transition hover:-translate-y-0.5 ${
+              isActive("/admin/pending-registrations")
+                ? "bg-(--brand-primary)/10 text-(--brand-primary)"
+                : "text-slate-500 hover:bg-slate-100"
+            }`}
+          >
+            <Users className="h-4 w-4" /> Users
+          </Link>
+        )}
       </nav>
 
       <div className="mt-auto space-y-3">
-        {/* User Info */}
         <div className="flex items-center gap-3 rounded-2xl bg-slate-50 px-3 py-3 text-xs text-slate-600">
           <div className="grid h-9 w-9 place-items-center rounded-full bg-white text-(--brand-primary)">
-            {clinic?.name?.substring(0, 2).toUpperCase() || "AD"}
+            {admin?.name?.substring(0, 2).toUpperCase() || "AD"}
           </div>
           <div className="min-w-0">
-            <p className="truncate text-xs font-semibold">{clinic?.name || "Admin"}</p>
-            <p className="text-[10px] text-slate-400">{clinic ? "Clinic" : "Not logged in"}</p>
+            <p className="truncate text-xs font-semibold">{admin?.name || "Admin"}</p>
+            <p className="text-[10px] text-slate-400">{admin?.email || "Not logged in"}</p>
           </div>
         </div>
 
-        {/* Logout Button - Show only when clinic/logged in */}
-        {clinic && (
+        {admin && (
           <button
             onClick={logout}
             className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold text-slate-500 transition hover:bg-red-50 hover:text-red-600"
@@ -80,3 +90,4 @@ export default function Sidebar() {
     </aside>
   );
 }
+

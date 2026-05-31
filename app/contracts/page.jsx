@@ -9,8 +9,17 @@ import { Input } from '@/app/components/ui/input';
 import LoadingSpinner from '@/app/components/LoadingSpinner';
 import ErrorMessage from '@/app/components/ErrorMessage';
 import SuccessMessage from '@/app/components/SuccessMessage';
+import ProtectedRoute from '@/app/components/ProtectedRoute';
 
-export default function ContractsPage() {
+export default function ContractsPageWrapper() {
+  return (
+    <ProtectedRoute>
+      <ContractsPage />
+    </ProtectedRoute>
+  );
+}
+
+function ContractsPage() {
   const { clinic } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');

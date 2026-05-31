@@ -9,8 +9,17 @@ import { Input } from '@/app/components/ui/input';
 import LoadingSpinner from '@/app/components/LoadingSpinner';
 import ErrorMessage from '@/app/components/ErrorMessage';
 import SuccessMessage from '@/app/components/SuccessMessage';
+import ProtectedRoute from '@/app/components/ProtectedRoute';
 
-export default function BillingPage() {
+export default function BillingPageWrapper() {
+  return (
+    <ProtectedRoute>
+      <BillingPage />
+    </ProtectedRoute>
+  );
+}
+
+function BillingPage() {
   const { clinic } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');

@@ -31,6 +31,7 @@ import NewDoctorDialog from "../components/NewDoctorDialog";
 import ErrorMessage from "../components/ErrorMessage";
 import SuccessMessage from "../components/SuccessMessage";
 import LoadingSpinner from "../components/LoadingSpinner";
+import ProtectedRoute from "../components/ProtectedRoute";
 import { apiGet, apiPatch } from "../lib/api";
 import { uploadDocuments } from "../lib/documentUpload";
 
@@ -128,7 +129,15 @@ function SectionHeader({ icon: Icon, title, action }) {
   );
 }
 
-export default function ClinicManagementPage() {
+export default function ClinicManagementPageWrapper() {
+  return (
+    <ProtectedRoute>
+      <ClinicManagementPage />
+    </ProtectedRoute>
+  );
+}
+
+function ClinicManagementPage() {
   const [clinics, setClinics] = useState([]);
   const [selectedClinicId, setSelectedClinicId] = useState("");
   const [selectedClinicData, setSelectedClinicData] = useState(null);

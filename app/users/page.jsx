@@ -10,9 +10,18 @@ import { Input } from '@/app/components/ui/input';
 import LoadingSpinner from '@/app/components/LoadingSpinner';
 import ErrorMessage from '@/app/components/ErrorMessage';
 import SuccessMessage from '@/app/components/SuccessMessage';
+import ProtectedRoute from '@/app/components/ProtectedRoute';
 import { Plus, Trash2, Edit2, X } from 'lucide-react';
 
-export default function UsersPage() {
+export default function UsersPageWrapper() {
+  return (
+    <ProtectedRoute>
+      <UsersPage />
+    </ProtectedRoute>
+  );
+}
+
+function UsersPage() {
   const router = useRouter();
   const { isAuthenticated, clinic, isLoading: authLoading } = useAuth();
 

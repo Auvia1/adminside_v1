@@ -6,32 +6,28 @@ import { apiCall, getToken, setToken, clearToken } from '@/app/lib/api';
 export const AuthContext = createContext();
 
 export default function AuthProvider({ children }) {
-  const [clinic, setClinic] = useState(null);
+  const [admin, setAdmin] = useState(null);
   const [token, setAuthToken] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Initialize auth on app load (check if token exists and is valid)
   useEffect(() => {
     const initializeAuth = async () => {
       const storedToken = getToken();
       if (storedToken) {
         setAuthToken(storedToken);
-        // Sync to cookie for middleware to access
         document.cookie = `auth_token=${storedToken}; path=/`;
-        // Verify token is still valid by calling /auth/me
         try {
-          const response = await apiCall('/auth/me', {
+          const response = await apiCall('/adminlogin/me', {
             headers: {
               Authorization: `Bearer ${storedToken}`,
             },
           });
-          setClinic(response.clinic);
+          setAdmin(response.admin);
         } catch (err) {
-          // Token is invalid, clear it
           clearToken();
           setAuthToken(null);
-          setClinic(null);
+          setAdmin(null);
           document.cookie = 'auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;';
         }
       }
@@ -41,21 +37,37 @@ export default function AuthProvider({ children }) {
     initializeAuth();
   }, []);
 
-  const login = async (username, password) => {
+  const login = async (email, password) => {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await apiCall('/auth/login', {
+      const response = await apiCall('/adminlogin/', {
         method: 'POST',
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ email, password }),
       });
 
       const newToken = response.token;
       setToken(newToken);
       setAuthToken(newToken);
-      setClinic(response.clinic);
-      // Sync to cookie for middleware to access
+      setAdmin(response.admin);
       document.cookie = `auth_token=${newToken}; path=/`;
+      return response;
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const register = async (name, email, phone, password) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await apiCall('/adminlogin/register', {
+        method: 'POST',
+        body: JSON.stringify({ name, email, phone, password }),
+      });
       return response;
     } catch (err) {
       setError(err.message);
@@ -68,22 +80,21 @@ export default function AuthProvider({ children }) {
   const logout = () => {
     clearToken();
     setAuthToken(null);
-    setClinic(null);
+    setAdmin(null);
     setError(null);
-    // Clear the cookie
     document.cookie = 'auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;';
-    // Redirect to login
     if (typeof window !== 'undefined') {
       window.location.href = '/login';
     }
   };
 
   const value = {
-    clinic,
+    admin,
     token,
     isLoading,
     error,
     login,
+    register,
     logout,
     isAuthenticated: !!token,
   };
