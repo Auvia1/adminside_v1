@@ -55,9 +55,9 @@ export default function Sidebar() {
         </Link>
         {admin?.role === 'superadmin' && (
           <Link
-            href="/admin/pending-registrations"
+            href="/users"
             className={`flex w-full items-center gap-2 rounded-xl px-3 py-2 font-semibold transition hover:-translate-y-0.5 ${
-              isActive("/admin/pending-registrations")
+              isActive("/users")
                 ? "bg-(--brand-primary)/10 text-(--brand-primary)"
                 : "text-slate-500 hover:bg-slate-100"
             }`}
