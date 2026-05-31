@@ -1,5 +1,6 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { createClient } from "@supabase/supabase-js";
+import { PDFParse } from "pdf-parse";
 
 export const runtime = "nodejs";
 const MAX_CHUNK_SIZE = 1000;
@@ -137,25 +138,64 @@ export async function POST(request) {
     initializeClients();
     console.log("✅ [STEP 1] Clients ready");
 
-    console.log("📄 [STEP 2] Parsing request body...");
-    const bodyText = await request.text();
-    console.log(`📄 [STEP 2] Request body size: ${bodyText.length} bytes`);
+    let clinicId, fileName, fileContent;
+    
+    const contentType = request.headers.get("content-type") || "";
+    if (contentType.includes("multipart/form-data")) {
+      console.log("📄 [STEP 2] Parsing FormData request...");
+      const formData = await request.formData();
+      clinicId = formData.get("clinicId");
+      fileName = formData.get("fileName");
+      const file = formData.get("file");
 
-    let body;
-    try {
-      body = JSON.parse(bodyText);
-    } catch (parseError) {
-      console.error("❌ [STEP 2] JSON parse error:", parseError.message);
-      console.error("❌ [STEP 2] Body preview:", bodyText.substring(0, 200));
-      return Response.json(
-        { success: false, error: "Invalid JSON in request body" },
-        { status: 400 }
-      );
+      if (!clinicId || !fileName || !file) {
+        return Response.json(
+          { success: false, error: "Missing required fields: clinicId, fileName, file" },
+          { status: 400 }
+        );
+      }
+
+      const buffer = Buffer.from(await file.arrayBuffer());
+
+      if (fileName.toLowerCase().endsWith(".pdf")) {
+        console.log(`📄 [STEP 2] Parsing PDF file: ${fileName}`);
+        try {
+          const parser = new PDFParse({ data: buffer });
+          const pdfData = await parser.getText();
+          fileContent = pdfData.text;
+        } catch (err) {
+          console.error("❌ [STEP 2] Failed to parse PDF:", err);
+          return Response.json(
+            { success: false, error: "Failed to parse PDF file" },
+            { status: 400 }
+          );
+        }
+      } else {
+        fileContent = buffer.toString("utf-8");
+      }
+    } else {
+      console.log("📄 [STEP 2] Parsing request body...");
+      const bodyText = await request.text();
+      console.log(`📄 [STEP 2] Request body size: ${bodyText.length} bytes`);
+
+      let body;
+      try {
+        body = JSON.parse(bodyText);
+      } catch (parseError) {
+        console.error("❌ [STEP 2] JSON parse error:", parseError.message);
+        console.error("❌ [STEP 2] Body preview:", bodyText.substring(0, 200));
+        return Response.json(
+          { success: false, error: "Invalid JSON in request body" },
+          { status: 400 }
+        );
+      }
+
+      clinicId = body.clinicId;
+      fileName = body.fileName;
+      fileContent = body.fileContent;
+      console.log(`📄 [STEP 2] Received file: ${fileName} for clinic: ${clinicId}`);
+      console.log(`📏 [STEP 2] Content size: ${fileContent?.length || 0} characters`);
     }
-
-    const { clinicId, fileName, fileContent } = body;
-    console.log(`📄 [STEP 2] Received file: ${fileName} for clinic: ${clinicId}`);
-    console.log(`📏 [STEP 2] Content size: ${fileContent?.length || 0} characters`);
 
     if (!clinicId || !fileName || !fileContent) {
       console.error("❌ [STEP 3] Missing required fields");

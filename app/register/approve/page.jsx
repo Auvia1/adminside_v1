@@ -22,8 +22,9 @@ export default function ApproveRegistrationPage() {
 
     const approveRegistration = async () => {
       try {
+        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4002';
         const response = await fetch(
-          `http://localhost:4002/api/adminlogin/approve/${token}`
+          `${backendUrl}/api/adminlogin/approve/${token}`
         );
         const data = await response.json();
 

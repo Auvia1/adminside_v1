@@ -205,38 +205,24 @@ function DocumentsPage() {
         // ── Step 2: Extract text and generate embeddings ──
         updateQueueItem(item.id, 'embedding', 'Generating embeddings...');
 
-        // Read file text content for embedding
-        let fileContent = '';
-        try {
-          fileContent = await item.file.text();
-        } catch {
-          // Binary files (images, etc.) won't have readable text
-          fileContent = `[File: ${item.file.name}] [Type: ${item.file.type}] [Size: ${item.file.size} bytes]`;
-        }
+        const embedFormData = new FormData();
+        embedFormData.append('clinicId', clinic.id);
+        embedFormData.append('fileName', item.file.name);
+        embedFormData.append('file', item.file);
 
-        // Only embed if we have meaningful text content
-        if (fileContent && fileContent.length > 10) {
-          const embedRes = await fetch('/api/embed-documents', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              clinicId: clinic.id,
-              fileName: item.file.name,
-              fileContent: fileContent,
-            }),
-          });
+        const embedRes = await fetch('/api/embed-documents', {
+          method: 'POST',
+          body: embedFormData,
+        });
 
-          const embedData = await embedRes.json();
+        const embedData = await embedRes.json();
 
-          if (!embedRes.ok || !embedData.success) {
-            // Embedding failure is non-fatal — file is already uploaded
-            console.warn(`⚠️ Embedding failed for ${item.file.name}:`, embedData.error);
-            updateQueueItem(item.id, 'success', `Uploaded (embedding skipped: ${embedData.error})`);
-          } else {
-            updateQueueItem(item.id, 'success', `Uploaded & embedded (${embedData.chunks} chunks)`);
-          }
+        if (!embedRes.ok || !embedData.success) {
+          // Embedding failure is non-fatal — file is already uploaded
+          console.warn(`⚠️ Embedding failed for ${item.file.name}:`, embedData.error);
+          updateQueueItem(item.id, 'success', `Uploaded (embedding skipped: ${embedData.error})`);
         } else {
-          updateQueueItem(item.id, 'success', 'Uploaded (no text to embed)');
+          updateQueueItem(item.id, 'success', `Uploaded & embedded (${embedData.chunks} chunks)`);
         }
 
         successCount++;

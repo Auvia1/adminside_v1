@@ -320,7 +320,9 @@ import { apiGet } from '../lib/api';
 
 // ─── Config ────────────────────────────────────────────────────────────────
 const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '';
-const MAP_API_BASE = 'http://localhost:4002/api';
+const MAP_API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL
+  ? `${process.env.NEXT_PUBLIC_BACKEND_URL}/api`
+  : 'http://localhost:4002/api';
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
 function statusToLabel() {

@@ -23,8 +23,9 @@ export default function PendingApprovalPage() {
     const checkApprovalStatus = async () => {
       try {
         setIsLoading(true);
+        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4002';
         const response = await fetch(
-          `http://localhost:4002/api/adminlogin/check-approval?email=${encodeURIComponent(email)}`
+          `${backendUrl}/api/adminlogin/check-approval?email=${encodeURIComponent(email)}`
         );
         const data = await response.json();
 

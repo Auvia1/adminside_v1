@@ -38,12 +38,8 @@ export async function uploadDocuments(files, clinicId) {
     console.log(`🔄 [CLIENT] Starting embedding process for clinic: ${clinicId}`);
     for (const file of selectedFiles) {
       try {
-        console.log(`📖 [CLIENT] Reading file content: ${file.name}`);
-        const fileContent = await file.text();
-        console.log(`📖 [CLIENT] File content size: ${fileContent.length} characters`);
-
         console.log(`🔗 [CLIENT] Calling embedAndSaveDocument for ${file.name}...`);
-        await embedAndSaveDocument(clinicId, file.name, fileContent);
+        await embedAndSaveDocument(clinicId, file.name, file);
         console.log(`✅ [CLIENT] Successfully embedded ${file.name}`);
       } catch (error) {
         console.error(`❌ [CLIENT] Failed to embed ${file.name}:`, error);
@@ -57,15 +53,16 @@ export async function uploadDocuments(files, clinicId) {
   return savedFiles;
 }
 
-async function embedAndSaveDocument(clinicId, fileName, fileContent) {
+async function embedAndSaveDocument(clinicId, fileName, file) {
   console.log(`📨 [CLIENT] Sending embed request for ${fileName}...`);
-  const payload = { clinicId, fileName, fileContent };
-  console.log(`📨 [CLIENT] Payload size: ${JSON.stringify(payload).length} bytes`);
+  const formData = new FormData();
+  formData.append("clinicId", clinicId);
+  formData.append("fileName", fileName);
+  formData.append("file", file);
 
   const response = await fetch("/api/embed-documents", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
+    body: formData,
   });
 
   const data = await response.json();

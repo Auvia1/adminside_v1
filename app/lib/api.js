@@ -3,7 +3,9 @@
  * Handles all HTTP requests to the backend API with automatic token management
  */
 
-const API_BASE_URL = 'http://localhost:4002/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL
+  ? `${process.env.NEXT_PUBLIC_BACKEND_URL}/api`
+  : 'http://localhost:4002/api';
 
 export function getToken() {
   if (typeof window === 'undefined') return null;
