@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { CheckCircle2, AlertCircle, Loader } from 'lucide-react';
 
-export default function ApproveRegistrationPage() {
+function ApproveRegistrationContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get('token');
@@ -96,5 +96,17 @@ export default function ApproveRegistrationPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function ApproveRegistrationPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex min-h-screen items-center justify-center bg-[#f6f9fb]">
+        <Loader className="h-12 w-12 text-blue-500 animate-spin" />
+      </div>
+    }>
+      <ApproveRegistrationContent />
+    </Suspense>
   );
 }

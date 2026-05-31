@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Clock, CheckCircle2, AlertCircle, Mail } from 'lucide-react';
+import { Clock, CheckCircle2, AlertCircle, Mail, Loader } from 'lucide-react';
 
-export default function PendingApprovalPage() {
+function PendingApprovalContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const email = searchParams.get('email');
@@ -137,5 +137,17 @@ export default function PendingApprovalPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function PendingApprovalPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex min-h-screen items-center justify-center bg-[#f6f9fb]">
+        <Loader className="h-12 w-12 text-blue-500 animate-spin" />
+      </div>
+    }>
+      <PendingApprovalContent />
+    </Suspense>
   );
 }

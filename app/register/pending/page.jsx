@@ -1,9 +1,10 @@
 'use client';
 
 import { useSearchParams, useRouter } from 'next/navigation';
-import { Clock, CheckCircle2 } from 'lucide-react';
+import { Clock, CheckCircle2, Loader } from 'lucide-react';
+import { Suspense } from 'react';
 
-export default function PendingPage() {
+function PendingContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const email = searchParams.get('email');
@@ -64,5 +65,17 @@ export default function PendingPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function PendingPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex min-h-screen items-center justify-center bg-[#f6f9fb]">
+        <Loader className="h-12 w-12 text-blue-500 animate-spin" />
+      </div>
+    }>
+      <PendingContent />
+    </Suspense>
   );
 }
