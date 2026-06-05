@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart3, Building2, ClipboardList, LogOut, Users } from "lucide-react";
+import { BarChart3, Building2, ClipboardList, LogOut, Users, CreditCard } from "lucide-react";
 import useAuth from "@/app/hooks/useAuth";
 
 export default function Sidebar() {
@@ -52,6 +52,16 @@ export default function Sidebar() {
           }`}
         >
           <Building2 className="h-4 w-4" /> Clinic Management
+        </Link>
+        <Link
+          href="/credit-management"
+          className={`flex w-full items-center gap-2 rounded-xl px-3 py-2 font-semibold transition hover:-translate-y-0.5 ${
+            isActive("/credit-management")
+              ? "bg-(--brand-primary)/10 text-(--brand-primary)"
+              : "text-slate-500 hover:bg-slate-100"
+          }`}
+        >
+          <CreditCard className="h-4 w-4" /> Credit Management
         </Link>
         {admin?.role === 'superadmin' && (
           <Link
