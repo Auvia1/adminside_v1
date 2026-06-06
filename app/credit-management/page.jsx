@@ -10,7 +10,29 @@ import { Badge } from '@/app/components/ui/badge';
 import LoadingSpinner from '@/app/components/LoadingSpinner';
 import ErrorMessage from '@/app/components/ErrorMessage';
 import ProtectedRoute from '@/app/components/ProtectedRoute';
-import { Activity, PhoneCall, CreditCard, PlayCircle, Search } from 'lucide-react';
+import { Activity, PhoneCall, CreditCard, PlayCircle, Search, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
+
+function formatDuration(seconds) {
+  if (!seconds) return "0s";
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
+}
+
+function formatTime(timestamp) {
+  if (!timestamp) return "N/A";
+  try {
+    const date = new Date(timestamp);
+    if (isNaN(date.getTime())) return "N/A";
+    return date.toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    });
+  } catch {
+    return "N/A";
+  }
+}
 
 export default function CreditManagementWrapper() {
   return (
@@ -218,53 +240,90 @@ function CallsAndAudioTab() {
 
       {error && <ErrorMessage message={error} onDismiss={() => setError('')} />}
 
-      <Card className="overflow-hidden">
-        {loading ? (
-          <div className="p-8 text-center"><LoadingSpinner text="Loading calls..." /></div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm text-slate-600">
-              <thead className="bg-slate-50 text-slate-900">
-                <tr>
-                  <th className="px-6 py-4 font-semibold">Date</th>
-                  <th className="px-6 py-4 font-semibold">Clinic</th>
-                  <th className="px-6 py-4 font-semibold">Duration (min)</th>
-                  <th className="px-6 py-4 font-semibold">Credits Used</th>
-                  <th className="px-6 py-4 font-semibold">Agent</th>
-                  <th className="px-6 py-4 font-semibold">Recording</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-200">
-                {calls.length === 0 ? (
-                  <tr>
-                    <td colSpan="6" className="px-6 py-8 text-center text-slate-500">
-                      No calls found for these filters.
-                    </td>
-                  </tr>
-                ) : (
-                  calls.map((call) => (
-                    <tr key={call.id} className="hover:bg-slate-50/50">
-                      <td className="px-6 py-4">{new Date(call.created_at).toLocaleString()}</td>
-                      <td className="px-6 py-4">{call.clinics?.name || call.clinic_id?.substring(0,8) || '-'}</td>
-                      <td className="px-6 py-4">{call.duration_minutes || '-'}</td>
-                      <td className="px-6 py-4 font-medium text-slate-900">{call.credits_deducted || '0'}</td>
-                      <td className="px-6 py-4">{call.agent_type || '-'}</td>
-                      <td className="px-6 py-4">
-                        {call.recording_url ? (
-                          <audio controls src={call.recording_url} className="h-8 w-48 max-w-full">
-                            Your browser does not support the audio element.
-                          </audio>
-                        ) : (
-                          <span className="text-slate-400 text-xs">No audio</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+      <Card className="border-slate-100 shadow-sm">
+        <div className="bg-slate-50 border-b border-slate-100 rounded-t-xl px-4 py-3">
+          <div className="grid grid-cols-[100px_1fr_1.2fr_1fr_1.5fr_80px_120px] text-[11px] uppercase tracking-[0.2em] text-slate-500 font-semibold">
+            <span>Time & Type</span>
+            <span>Clinic</span>
+            <span>Caller</span>
+            <span>Duration</span>
+            <span>AI Summary</span>
+            <span>Credits</span>
+            <span>Recording</span>
           </div>
-        )}
+        </div>
+        <div className="p-4 space-y-3 bg-white rounded-b-xl">
+          {loading ? (
+            <div className="py-8 text-center"><LoadingSpinner text="Loading calls..." /></div>
+          ) : calls.length === 0 ? (
+            <div className="flex items-center justify-center py-8 text-slate-500">
+              No calls found for these filters.
+            </div>
+          ) : (
+            calls.map((call) => (
+              <div
+                key={call.id}
+                className={`grid grid-cols-[100px_1fr_1.2fr_1fr_1.5fr_80px_120px] items-center gap-3 rounded-2xl border border-slate-100 px-4 py-3 text-sm transition-transform duration-200 hover:-translate-y-0.5 hover:shadow ${
+                  call.type === "incoming"
+                    ? "border-l-2 border-l-[var(--brand-primary)]"
+                    : "border-l-2 border-l-slate-300"
+                }`}
+              >
+                <div className="text-xs font-semibold">
+                  {formatTime(call.time).split(" ")[0]}
+                  <span className="block text-[10px] text-slate-400">
+                    {formatTime(call.time).split(" ")[1]}
+                  </span>
+                  <div className="mt-1 flex items-center gap-1 text-[10px] text-slate-500">
+                    {call.type === 'incoming' ? (
+                      <ArrowDownLeft className="h-3 w-3 text-emerald-500" />
+                    ) : (
+                      <ArrowUpRight className="h-3 w-3 text-slate-500" />
+                    )}
+                    {call.type === 'incoming' ? 'Incoming' : 'Outgoing'}
+                  </div>
+                </div>
+                
+                <div className="text-xs font-medium text-slate-900 truncate">
+                  {call.clinics?.name || call.clinic_name || call.clinic_id?.substring(0,8) || '-'}
+                </div>
+
+                <div>
+                  <p className="font-semibold text-slate-800">{call.caller}</p>
+                </div>
+                
+                <div>
+                  <Badge variant="outline" className="text-[9px] uppercase tracking-wider bg-slate-50">
+                    {call.agent_type || "Unknown"}
+                  </Badge>
+                  <div className="text-[10px] text-slate-500 mt-1 font-medium">{formatDuration(call.duration)}</div>
+                </div>
+                
+                <div>
+                  {call.ai_summary ? (
+                    <p className="text-xs text-slate-500 line-clamp-2">"{call.ai_summary}"</p>
+                  ) : (
+                    <p className="text-xs text-slate-400">No summary</p>
+                  )}
+                </div>
+
+                <div className="font-medium text-slate-900 text-xs">
+                  {call.duration ? Math.ceil(call.duration / 60) : 0} cr
+                </div>
+
+                <div className="flex items-center justify-end">
+                  {call.recording ? (
+                    <audio controls src={call.recording} className="h-8 w-28 max-w-full text-xs">
+                      No audio
+                    </audio>
+                  ) : (
+                    <span className="text-xs text-slate-400">No recording</span>
+                  )}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
       </Card>
     </div>
   );
