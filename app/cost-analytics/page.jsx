@@ -577,6 +577,7 @@ function CallDetailsTab({ dateRange }) {
               <thead className="bg-slate-50 text-slate-900">
                 <tr>
                   <th className="whitespace-nowrap px-4 py-3.5 font-semibold">Date</th>
+                  <th className="whitespace-nowrap px-4 py-3.5 font-semibold">Caller</th>
                   <th className="whitespace-nowrap px-4 py-3.5 font-semibold">Duration</th>
                   <th className="whitespace-nowrap px-4 py-3.5 font-semibold text-right">Rounded Time</th>
                   <th className="whitespace-nowrap px-4 py-3.5 font-semibold text-right">
@@ -621,7 +622,7 @@ function CallDetailsTab({ dateRange }) {
               <tbody className="divide-y divide-slate-100">
                 {records.length === 0 ? (
                   <tr>
-                    <td colSpan={10} className="px-6 py-12 text-center text-slate-400">
+                    <td colSpan={11} className="px-6 py-12 text-center text-slate-400">
                       No cost records found for this period.
                     </td>
                   </tr>
@@ -642,6 +643,9 @@ function CallDetailsTab({ dateRange }) {
                             hour12: true,
                           })}
                         </span>
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 text-xs font-semibold text-slate-700">
+                        {row.caller_phone || 'N/A'}
                       </td>
                       <td className="whitespace-nowrap px-4 py-3 text-xs font-medium text-slate-700">
                         {formatDurationMinutes(row.duration_minutes)}
@@ -968,6 +972,7 @@ function MarginsTab({ dateRange, summary, summaryLoading }) {
               <thead className="bg-slate-50 text-slate-900">
                 <tr>
                   <th className="whitespace-nowrap px-4 py-3.5 font-semibold">Date</th>
+                  <th className="whitespace-nowrap px-4 py-3.5 font-semibold">Caller</th>
                   <th className="whitespace-nowrap px-4 py-3.5 font-semibold">Duration</th>
                   <th className="whitespace-nowrap px-4 py-3.5 font-semibold text-right">Rounded Time</th>
                   <th className="whitespace-nowrap px-4 py-3.5 font-semibold text-right">Revenue (₹5/min)</th>
@@ -980,7 +985,7 @@ function MarginsTab({ dateRange, summary, summaryLoading }) {
               <tbody className="divide-y divide-slate-100">
                 {records.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="px-6 py-12 text-center text-slate-400">
+                    <td colSpan={9} className="px-6 py-12 text-center text-slate-400">
                       No records found for this period.
                     </td>
                   </tr>
@@ -1010,6 +1015,9 @@ function MarginsTab({ dateRange, summary, summaryLoading }) {
                               hour12: true,
                             })}
                           </span>
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-3 text-xs font-semibold text-slate-700">
+                          {row.caller_phone || 'N/A'}
                         </td>
                         <td className="whitespace-nowrap px-4 py-3 text-xs font-medium text-slate-700">
                           {formatDurationMinutes(durationMin)}
