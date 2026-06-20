@@ -788,8 +788,10 @@ function MarginsTab({ dateRange, summary, summaryLoading }) {
   };
 
   // ── Aggregate margin stats from summary ────────────────────────────
-  const totalDurationMin = Number(summary?.avg_duration_minutes || 0) * Number(summary?.total_calls || 0);
-  const totalRevenue = Math.ceil(totalDurationMin) * RATE_PER_MINUTE;
+  const roundedDurationMin = summary?.total_billed_duration_minutes !== undefined
+    ? Number(summary.total_billed_duration_minutes || 0)
+    : Math.ceil(Number(summary?.avg_duration_minutes || 0) * Number(summary?.total_calls || 0));
+  const totalRevenue = roundedDurationMin * RATE_PER_MINUTE;
   const totalCost = Number(summary?.total_cost || 0);
   const totalMargin = totalRevenue - totalCost;
   const marginPct = totalRevenue > 0 ? ((totalMargin / totalRevenue) * 100) : 0;
@@ -799,7 +801,7 @@ function MarginsTab({ dateRange, summary, summaryLoading }) {
     {
       label: 'Total Revenue',
       value: formatRupee(totalRevenue),
-      sub: `${Math.ceil(totalDurationMin)} min × ₹${RATE_PER_MINUTE}/min`,
+      sub: `${roundedDurationMin} min × ₹${RATE_PER_MINUTE}/min`,
       color: 'bg-sky-50 text-sky-600',
       icon: IndianRupee,
     },
@@ -872,7 +874,7 @@ function MarginsTab({ dateRange, summary, summaryLoading }) {
               {/* Revenue bar */}
               <div className="flex flex-1 flex-col items-center gap-2">
                 <span className="text-xs font-bold text-sky-600">{formatRupee(totalRevenue)}</span>
-                <div className="w-full rounded-xl bg-sky-100" style={{ height: 120 }}>
+                <div className="w-full rounded-xl bg-sky-100 flex items-end" style={{ height: 120 }}>
                   <div className="h-full w-full rounded-xl bg-gradient-to-t from-sky-500 to-sky-400 transition-all duration-500" />
                 </div>
                 <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Revenue</span>
@@ -881,10 +883,10 @@ function MarginsTab({ dateRange, summary, summaryLoading }) {
               {/* Cost bar — scaled proportionally */}
               <div className="flex flex-1 flex-col items-center gap-2">
                 <span className="text-xs font-bold text-rose-600">{formatRupee(totalCost)}</span>
-                <div className="w-full rounded-xl bg-rose-50" style={{ height: 120 }}>
+                <div className="w-full rounded-xl bg-rose-50 flex items-end" style={{ height: 120 }}>
                   <div
                     className="w-full rounded-xl bg-gradient-to-t from-rose-500 to-rose-400 transition-all duration-500"
-                    style={{ height: totalRevenue > 0 ? `${Math.min((totalCost / totalRevenue) * 100, 100)}%` : '0%', marginTop: 'auto', display: 'flex', alignSelf: 'flex-end' }}
+                    style={{ height: totalRevenue > 0 ? `${Math.min((totalCost / totalRevenue) * 100, 100)}%` : '0%' }}
                   />
                 </div>
                 <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Cost</span>
@@ -895,7 +897,7 @@ function MarginsTab({ dateRange, summary, summaryLoading }) {
                 <span className={`text-xs font-bold ${isPositive ? 'text-emerald-600' : 'text-red-600'}`}>
                   {totalMargin >= 0 ? '+' : ''}{formatRupee(totalMargin)}
                 </span>
-                <div className={`w-full rounded-xl ${isPositive ? 'bg-emerald-50' : 'bg-red-50'}`} style={{ height: 120 }}>
+                <div className={`w-full rounded-xl flex items-end ${isPositive ? 'bg-emerald-50' : 'bg-red-50'}`} style={{ height: 120 }}>
                   <div
                     className={`w-full rounded-xl transition-all duration-500 ${isPositive ? 'bg-gradient-to-t from-emerald-500 to-emerald-400' : 'bg-gradient-to-t from-red-500 to-red-400'}`}
                     style={{ height: totalRevenue > 0 ? `${Math.min((Math.abs(totalMargin) / totalRevenue) * 100, 100)}%` : '0%' }}
@@ -985,7 +987,8 @@ function MarginsTab({ dateRange, summary, summaryLoading }) {
                 ) : (
                   records.map((row) => {
                     const durationMin = Number(row.duration_minutes || 0);
-                    const revenue = Math.ceil(durationMin) * RATE_PER_MINUTE;
+                    const roundedDurationMin = Math.ceil(durationMin);
+                    const revenue = roundedDurationMin * RATE_PER_MINUTE;
                     const cost = Number(row.total_cost || 0);
                     const margin = revenue - cost;
                     const mPct = revenue > 0 ? ((margin / revenue) * 100) : 0;
@@ -1012,7 +1015,7 @@ function MarginsTab({ dateRange, summary, summaryLoading }) {
                           {formatDurationMinutes(durationMin)}
                         </td>
                         <td className="whitespace-nowrap px-4 py-3 text-right text-xs font-medium text-slate-700">
-                          {Math.ceil(durationMin)}m
+                          {roundedDurationMin}m
                         </td>
                         <td className="whitespace-nowrap px-4 py-3 text-right font-mono text-xs text-sky-700 font-semibold">
                           ₹{revenue.toFixed(2)}
