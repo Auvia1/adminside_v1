@@ -578,6 +578,7 @@ function CallDetailsTab({ dateRange }) {
                 <tr>
                   <th className="whitespace-nowrap px-4 py-3.5 font-semibold">Date</th>
                   <th className="whitespace-nowrap px-4 py-3.5 font-semibold">Duration</th>
+                  <th className="whitespace-nowrap px-4 py-3.5 font-semibold text-right">Rounded Time</th>
                   <th className="whitespace-nowrap px-4 py-3.5 font-semibold text-right">
                     <span className="inline-flex items-center gap-1">
                       <span className="h-2 w-2 rounded-full" style={{ background: COST_COLORS.stt }} />
@@ -615,7 +616,6 @@ function CallDetailsTab({ dateRange }) {
                     </span>
                   </th>
                   <th className="whitespace-nowrap px-4 py-3.5 font-semibold text-right">Total</th>
-                  <th className="whitespace-nowrap px-4 py-3.5 font-semibold text-right">Billed</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -646,6 +646,9 @@ function CallDetailsTab({ dateRange }) {
                       <td className="whitespace-nowrap px-4 py-3 text-xs font-medium text-slate-700">
                         {formatDurationMinutes(row.duration_minutes)}
                       </td>
+                      <td className="whitespace-nowrap px-4 py-3 text-right text-xs font-medium text-slate-700">
+                        {Math.ceil(row.duration_minutes)}m
+                      </td>
                       <td className="whitespace-nowrap px-4 py-3 text-right font-mono text-xs text-slate-600">
                         {Number(row.stt_cost).toFixed(4)}
                       </td>
@@ -666,15 +669,6 @@ function CallDetailsTab({ dateRange }) {
                       </td>
                       <td className="whitespace-nowrap px-4 py-3 text-right text-xs font-bold text-slate-900">
                         ₹{Number(row.total_cost).toFixed(4)}
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-3 text-right text-xs">
-                        {row.credits_billed != null ? (
-                          <Badge className="bg-emerald-50 text-emerald-700 border-emerald-100">
-                            ₹{Number(row.credits_billed).toFixed(2)}
-                          </Badge>
-                        ) : (
-                          <span className="text-slate-300">—</span>
-                        )}
                       </td>
                     </tr>
                   ))
@@ -795,7 +789,7 @@ function MarginsTab({ dateRange, summary, summaryLoading }) {
 
   // ── Aggregate margin stats from summary ────────────────────────────
   const totalDurationMin = Number(summary?.avg_duration_minutes || 0) * Number(summary?.total_calls || 0);
-  const totalRevenue = totalDurationMin * RATE_PER_MINUTE;
+  const totalRevenue = Math.ceil(totalDurationMin) * RATE_PER_MINUTE;
   const totalCost = Number(summary?.total_cost || 0);
   const totalMargin = totalRevenue - totalCost;
   const marginPct = totalRevenue > 0 ? ((totalMargin / totalRevenue) * 100) : 0;
@@ -805,7 +799,7 @@ function MarginsTab({ dateRange, summary, summaryLoading }) {
     {
       label: 'Total Revenue',
       value: formatRupee(totalRevenue),
-      sub: `${totalDurationMin.toFixed(1)} min × ₹${RATE_PER_MINUTE}/min`,
+      sub: `${Math.ceil(totalDurationMin)} min × ₹${RATE_PER_MINUTE}/min`,
       color: 'bg-sky-50 text-sky-600',
       icon: IndianRupee,
     },
@@ -973,6 +967,7 @@ function MarginsTab({ dateRange, summary, summaryLoading }) {
                 <tr>
                   <th className="whitespace-nowrap px-4 py-3.5 font-semibold">Date</th>
                   <th className="whitespace-nowrap px-4 py-3.5 font-semibold">Duration</th>
+                  <th className="whitespace-nowrap px-4 py-3.5 font-semibold text-right">Rounded Time</th>
                   <th className="whitespace-nowrap px-4 py-3.5 font-semibold text-right">Revenue (₹5/min)</th>
                   <th className="whitespace-nowrap px-4 py-3.5 font-semibold text-right">Total Cost</th>
                   <th className="whitespace-nowrap px-4 py-3.5 font-semibold text-right">Margin</th>
@@ -983,14 +978,14 @@ function MarginsTab({ dateRange, summary, summaryLoading }) {
               <tbody className="divide-y divide-slate-100">
                 {records.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-6 py-12 text-center text-slate-400">
+                    <td colSpan={8} className="px-6 py-12 text-center text-slate-400">
                       No records found for this period.
                     </td>
                   </tr>
                 ) : (
                   records.map((row) => {
                     const durationMin = Number(row.duration_minutes || 0);
-                    const revenue = durationMin * RATE_PER_MINUTE;
+                    const revenue = Math.ceil(durationMin) * RATE_PER_MINUTE;
                     const cost = Number(row.total_cost || 0);
                     const margin = revenue - cost;
                     const mPct = revenue > 0 ? ((margin / revenue) * 100) : 0;
@@ -1015,6 +1010,9 @@ function MarginsTab({ dateRange, summary, summaryLoading }) {
                         </td>
                         <td className="whitespace-nowrap px-4 py-3 text-xs font-medium text-slate-700">
                           {formatDurationMinutes(durationMin)}
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-3 text-right text-xs font-medium text-slate-700">
+                          {Math.ceil(durationMin)}m
                         </td>
                         <td className="whitespace-nowrap px-4 py-3 text-right font-mono text-xs text-sky-700 font-semibold">
                           ₹{revenue.toFixed(2)}
