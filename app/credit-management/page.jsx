@@ -201,7 +201,7 @@ function CreditOverviewTab() {
                         className="h-8 px-3 text-xs"
                       >
                         <Plus className="h-3 w-3 mr-1" />
-                        Adjust
+                        Add Credits
                       </Button>
                     </td>
                   </tr>

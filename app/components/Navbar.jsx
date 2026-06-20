@@ -43,12 +43,7 @@ export default function Navbar() {
           >
             Dashboard
           </Link>
-          <Link
-            href="/Analytics"
-            className="rounded-xl px-3 py-2 transition hover:bg-[var(--brand-primary)]/10 hover:text-[var(--brand-primary)]"
-          >
-            Analytics
-          </Link>
+
           <Link
             href="/Clinic%20Management"
             className="rounded-xl px-3 py-2 transition hover:bg-[var(--brand-primary)]/10 hover:text-[var(--brand-primary)]"

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart3, Building2, ClipboardList, LogOut, Users, CreditCard } from "lucide-react";
+import { BarChart3, Building2, LogOut, Users, CreditCard, IndianRupee } from "lucide-react";
 import useAuth from "@/app/hooks/useAuth";
 
 export default function Sidebar() {
@@ -33,16 +33,7 @@ export default function Sidebar() {
         >
           <BarChart3 className="h-4 w-4" /> Dashboard
         </Link>
-        <Link
-          href="/Analytics"
-          className={`flex w-full items-center gap-2 rounded-xl px-3 py-2 font-semibold transition hover:-translate-y-0.5 ${
-            isActive("/Analytics")
-              ? "bg-(--brand-primary)/10 text-(--brand-primary)"
-              : "text-slate-500 hover:bg-slate-100"
-          }`}
-        >
-          <ClipboardList className="h-4 w-4" /> Analytics
-        </Link>
+
         <Link
           href="/clinic-management"
           className={`flex w-full items-center gap-2 rounded-xl px-3 py-2 font-semibold transition hover:-translate-y-0.5 ${
@@ -62,6 +53,16 @@ export default function Sidebar() {
           }`}
         >
           <CreditCard className="h-4 w-4" /> Credit Management
+        </Link>
+        <Link
+          href="/cost-analytics"
+          className={`flex w-full items-center gap-2 rounded-xl px-3 py-2 font-semibold transition hover:-translate-y-0.5 ${
+            isActive("/cost-analytics")
+              ? "bg-(--brand-primary)/10 text-(--brand-primary)"
+              : "text-slate-500 hover:bg-slate-100"
+          }`}
+        >
+          <IndianRupee className="h-4 w-4" /> Cost Analytics
         </Link>
         {admin?.role === 'superadmin' && (
           <Link
