@@ -645,7 +645,7 @@ function CallDetailsTab({ dateRange }) {
                         </span>
                       </td>
                       <td className="whitespace-nowrap px-4 py-3 text-xs font-semibold text-slate-700">
-                        {row.caller_phone || 'N/A'}
+                        {row.phone_number || row.caller_phone || 'N/A'}
                       </td>
                       <td className="whitespace-nowrap px-4 py-3 text-xs font-medium text-slate-700">
                         {formatDurationMinutes(row.duration_minutes)}
@@ -1017,7 +1017,7 @@ function MarginsTab({ dateRange, summary, summaryLoading }) {
                           </span>
                         </td>
                         <td className="whitespace-nowrap px-4 py-3 text-xs font-semibold text-slate-700">
-                          {row.caller_phone || 'N/A'}
+                          {row.phone_number || row.caller_phone || 'N/A'}
                         </td>
                         <td className="whitespace-nowrap px-4 py-3 text-xs font-medium text-slate-700">
                           {formatDurationMinutes(durationMin)}
