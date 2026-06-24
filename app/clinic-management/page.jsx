@@ -26,6 +26,7 @@ import {
   AlertCircle,
   FileText,
   X,
+  Pencil,
 } from "lucide-react";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
@@ -33,6 +34,7 @@ import { Card } from "../components/ui/card";
 import { Switch } from "../components/ui/switch";
 import { Input } from "../components/ui/input";
 import NewPhoneNumberDialog from "../components/NewPhoneNumberDialog";
+import EditPhoneNumberDialog from "../components/EditPhoneNumberDialog";
 import NewDoctorDialog from "../components/NewDoctorDialog";
 import ErrorMessage from "../components/ErrorMessage";
 import SuccessMessage from "../components/SuccessMessage";
@@ -251,6 +253,7 @@ function ClinicManagementPage() {
           number: item.number,
           type: item.service_type || "Reception Line",
           status: item.status || (item.is_active ? "Live" : "Inactive"),
+          isActive: Boolean(item.is_active),
         }))
       );
       setDoctors(
@@ -347,6 +350,12 @@ function ClinicManagementPage() {
     } catch (error) {
       setPageError(error.message || "Failed to delete phone number.");
     }
+  };
+
+  const handleUpdatePhoneNumber = (updatedPhoneNumber) => {
+    setPhoneNumbers((prev) =>
+      prev.map((item) => (item.id === updatedPhoneNumber.id ? updatedPhoneNumber : item))
+    );
   };
 
   const handleCreateDoctor = (doctorData) => {
@@ -877,12 +886,17 @@ function ClinicManagementPage() {
                 <span>{item.type}</span>
                 <Badge className="w-fit bg-emerald-50 text-emerald-600">{item.status}</Badge>
                 <div className="flex items-center justify-end gap-2 justify-self-end">
-                  <button className="text-slate-300 hover:text-slate-500">
-                    <Settings className="h-4 w-4" />
-                  </button>
+                  <EditPhoneNumberDialog
+                    phoneNumberItem={item}
+                    onUpdate={handleUpdatePhoneNumber}
+                  >
+                    <button className="text-slate-300 hover:text-slate-500" title="Edit phone number">
+                      <Pencil className="h-4 w-4" />
+                    </button>
+                  </EditPhoneNumberDialog>
                   <button
                     onClick={() => handleDeletePhoneNumber(item.id, item.number)}
-                    className="text-slate-300 hover:text-red-500 transition opacity-0 group-hover:opacity-100"
+                    className="text-slate-300 hover:text-red-500 transition"
                     title="Delete phone number"
                   >
                     <Trash2 className="h-4 w-4" />
