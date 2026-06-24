@@ -244,15 +244,15 @@ export default function NewDoctorDialog({ clinicId, onCreate, triggerClassName }
         </Button>
       </DialogTrigger>
 
-      <DialogContent className="max-w-4xl">
-        <DialogHeader>
+      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle>Add New Doctor</DialogTitle>
           <DialogDescription>
             Add doctor info, weekly schedule, and optional time off in 3 steps.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="mt-5 space-y-4">
+        <div className="mt-5 space-y-4 flex-shrink-0">
           <div className="flex items-center justify-between text-xs text-slate-400">
             <span>
               Step {step + 1} of {steps.length}
@@ -268,11 +268,11 @@ export default function NewDoctorDialog({ clinicId, onCreate, triggerClassName }
         </div>
 
         {submitError ? (
-          <ErrorMessage message={submitError} onDismiss={() => setSubmitError("")} className="mt-4" />
+          <ErrorMessage message={submitError} onDismiss={() => setSubmitError("")} className="mt-4 flex-shrink-0" />
         ) : null}
 
         {submitSuccess ? (
-          <div className="mt-5 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+          <div className="mt-5 rounded-xl border border-emerald-200 bg-emerald-50 p-4 flex-shrink-0">
             <div className="flex items-center gap-2 text-sm font-semibold text-emerald-700">
               <CheckCircle2 className="h-5 w-5" />
               Doctor created successfully.
@@ -281,216 +281,220 @@ export default function NewDoctorDialog({ clinicId, onCreate, triggerClassName }
         ) : null}
 
         {isSubmitting ? (
-          <LoadingSpinner text="Saving doctor, schedule, and time off..." size="sm" />
+          <div className="flex-1 flex items-center justify-center min-h-[200px]">
+            <LoadingSpinner text="Saving doctor, schedule, and time off..." size="sm" />
+          </div>
         ) : (
-          <div className="mt-6 space-y-4">
-            {step === 0 ? (
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2 md:col-span-2">
-                  <label className="text-xs font-semibold text-slate-500">Doctor Name *</label>
-                  <Input
-                    value={doctorForm.name}
-                    onChange={(event) => updateDoctor("name", event.target.value)}
-                    placeholder="Dr. John Doe"
-                  />
+          <div className="mt-6 flex-1 flex flex-col min-h-0">
+            <div className="flex-1 overflow-y-auto pr-1 min-h-0 space-y-4">
+              {step === 0 ? (
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2 md:col-span-2">
+                    <label className="text-xs font-semibold text-slate-500">Doctor Name *</label>
+                    <Input
+                      value={doctorForm.name}
+                      onChange={(event) => updateDoctor("name", event.target.value)}
+                      placeholder="Dr. John Doe"
+                    />
+                  </div>
+                  <div className="space-y-2 md:col-span-2">
+                    <label className="text-xs font-semibold text-slate-500">Speciality</label>
+                    <Input
+                      value={doctorForm.speciality}
+                      onChange={(event) => updateDoctor("speciality", event.target.value)}
+                      placeholder="Cardiology"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-semibold text-slate-500">Consultation Duration (min) *</label>
+                    <Input
+                      type="number"
+                      min={1}
+                      value={doctorForm.consultation_duration_minutes}
+                      onChange={(event) =>
+                        updateDoctor("consultation_duration_minutes", Number(event.target.value))
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-semibold text-slate-500">Buffer Time (min)</label>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={doctorForm.buffer_time_minutes}
+                      onChange={(event) => updateDoctor("buffer_time_minutes", Number(event.target.value))}
+                    />
+                  </div>
+                  <div className="space-y-2 md:col-span-2">
+                    <label className="text-xs font-semibold text-slate-500">Max Appointments Per Day *</label>
+                    <Input
+                      type="number"
+                      min={1}
+                      value={doctorForm.max_appointments_per_day}
+                      onChange={(event) =>
+                        updateDoctor("max_appointments_per_day", Number(event.target.value))
+                      }
+                    />
+                  </div>
                 </div>
-                <div className="space-y-2 md:col-span-2">
-                  <label className="text-xs font-semibold text-slate-500">Speciality</label>
-                  <Input
-                    value={doctorForm.speciality}
-                    onChange={(event) => updateDoctor("speciality", event.target.value)}
-                    placeholder="Cardiology"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-semibold text-slate-500">Consultation Duration (min) *</label>
-                  <Input
-                    type="number"
-                    min={1}
-                    value={doctorForm.consultation_duration_minutes}
-                    onChange={(event) =>
-                      updateDoctor("consultation_duration_minutes", Number(event.target.value))
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-semibold text-slate-500">Buffer Time (min)</label>
-                  <Input
-                    type="number"
-                    min={0}
-                    value={doctorForm.buffer_time_minutes}
-                    onChange={(event) => updateDoctor("buffer_time_minutes", Number(event.target.value))}
-                  />
-                </div>
-                <div className="space-y-2 md:col-span-2">
-                  <label className="text-xs font-semibold text-slate-500">Max Appointments Per Day *</label>
-                  <Input
-                    type="number"
-                    min={1}
-                    value={doctorForm.max_appointments_per_day}
-                    onChange={(event) =>
-                      updateDoctor("max_appointments_per_day", Number(event.target.value))
-                    }
-                  />
-                </div>
-              </div>
-            ) : null}
+              ) : null}
 
-            {step === 1 ? (
-              <div className="space-y-3">
-                {schedules.map((schedule, index) => (
-                  <div key={`schedule-${index}`} className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
-                    <div className="mb-3 flex items-center justify-between">
-                      <p className="text-xs font-semibold text-slate-600">Schedule #{index + 1}</p>
-                      {schedules.length > 1 ? (
+              {step === 1 ? (
+                <div className="space-y-3">
+                  {schedules.map((schedule, index) => (
+                    <div key={`schedule-${index}`} className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                      <div className="mb-3 flex items-center justify-between">
+                        <p className="text-xs font-semibold text-slate-600">Schedule #{index + 1}</p>
+                        {schedules.length > 1 ? (
+                          <button
+                            onClick={() =>
+                              setSchedules((prev) => prev.filter((_, rowIndex) => rowIndex !== index))
+                            }
+                            className="text-slate-400 transition hover:text-rose-500"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        ) : null}
+                      </div>
+
+                      <div className="grid gap-3 md:grid-cols-3">
+                        <div className="space-y-1">
+                          <label className="text-[11px] font-semibold text-slate-500">Day *</label>
+                          <select
+                            value={schedule.day_of_week}
+                            onChange={(event) =>
+                              updateSchedule(index, "day_of_week", Number(event.target.value))
+                            }
+                            className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none"
+                          >
+                            {dayOptions.map((day) => (
+                              <option key={day.value} value={day.value}>
+                                {day.label}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-[11px] font-semibold text-slate-500">Start Time *</label>
+                          <Input
+                            type="time"
+                            value={schedule.start_time}
+                            onChange={(event) => updateSchedule(index, "start_time", event.target.value)}
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-[11px] font-semibold text-slate-500">End Time *</label>
+                          <Input
+                            type="time"
+                            value={schedule.end_time}
+                            onChange={(event) => updateSchedule(index, "end_time", event.target.value)}
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-[11px] font-semibold text-slate-500">Slot Duration (min)</label>
+                          <div className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 flex items-center text-sm text-slate-700">
+                            {schedule.slot_duration_minutes}
+                          </div>
+                          <p className="text-[10px] text-slate-400">Matches consultation duration ({doctorForm.consultation_duration_minutes} min)</p>
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-[11px] font-semibold text-slate-500">Effective From</label>
+                          <Input
+                            type="date"
+                            value={schedule.effective_from}
+                            onChange={(event) => updateSchedule(index, "effective_from", event.target.value)}
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-[11px] font-semibold text-slate-500">Effective To</label>
+                          <Input
+                            type="date"
+                            value={schedule.effective_to}
+                            onChange={(event) => updateSchedule(index, "effective_to", event.target.value)}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+
+                  <Button
+                    variant="outline"
+                    onClick={() => setSchedules((prev) => [...prev, makeDefaultSchedule(doctorForm.consultation_duration_minutes)])}
+                    className="h-9 text-xs"
+                  >
+                    <Plus className="h-4 w-4" /> Add Another Schedule
+                  </Button>
+                </div>
+              ) : null}
+
+              {step === 2 ? (
+                <div className="space-y-3">
+                  {timeOffs.map((timeOff, index) => (
+                    <div key={`timeoff-${index}`} className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                      <div className="mb-3 flex items-center justify-between">
+                        <p className="text-xs font-semibold text-slate-600">Time Off #{index + 1}</p>
                         <button
                           onClick={() =>
-                            setSchedules((prev) => prev.filter((_, rowIndex) => rowIndex !== index))
+                            setTimeOffs((prev) => prev.filter((_, rowIndex) => rowIndex !== index))
                           }
                           className="text-slate-400 transition hover:text-rose-500"
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
-                      ) : null}
-                    </div>
-
-                    <div className="grid gap-3 md:grid-cols-3">
-                      <div className="space-y-1">
-                        <label className="text-[11px] font-semibold text-slate-500">Day *</label>
-                        <select
-                          value={schedule.day_of_week}
-                          onChange={(event) =>
-                            updateSchedule(index, "day_of_week", Number(event.target.value))
-                          }
-                          className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none"
-                        >
-                          {dayOptions.map((day) => (
-                            <option key={day.value} value={day.value}>
-                              {day.label}
-                            </option>
-                          ))}
-                        </select>
                       </div>
 
-                      <div className="space-y-1">
-                        <label className="text-[11px] font-semibold text-slate-500">Start Time *</label>
-                        <Input
-                          type="time"
-                          value={schedule.start_time}
-                          onChange={(event) => updateSchedule(index, "start_time", event.target.value)}
-                        />
-                      </div>
-
-                      <div className="space-y-1">
-                        <label className="text-[11px] font-semibold text-slate-500">End Time *</label>
-                        <Input
-                          type="time"
-                          value={schedule.end_time}
-                          onChange={(event) => updateSchedule(index, "end_time", event.target.value)}
-                        />
-                      </div>
-
-                      <div className="space-y-1">
-                        <label className="text-[11px] font-semibold text-slate-500">Slot Duration (min)</label>
-                        <div className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 flex items-center text-sm text-slate-700">
-                          {schedule.slot_duration_minutes}
+                      <div className="grid gap-3 md:grid-cols-2">
+                        <div className="space-y-1">
+                          <label className="text-[11px] font-semibold text-slate-500">Start *</label>
+                          <Input
+                            type="datetime-local"
+                            value={timeOff.start_time}
+                            onChange={(event) => updateTimeOff(index, "start_time", event.target.value)}
+                          />
                         </div>
-                        <p className="text-[10px] text-slate-400">Matches consultation duration ({doctorForm.consultation_duration_minutes} min)</p>
-                      </div>
 
-                      <div className="space-y-1">
-                        <label className="text-[11px] font-semibold text-slate-500">Effective From</label>
-                        <Input
-                          type="date"
-                          value={schedule.effective_from}
-                          onChange={(event) => updateSchedule(index, "effective_from", event.target.value)}
-                        />
-                      </div>
+                        <div className="space-y-1">
+                          <label className="text-[11px] font-semibold text-slate-500">End *</label>
+                          <Input
+                            type="datetime-local"
+                            value={timeOff.end_time}
+                            onChange={(event) => updateTimeOff(index, "end_time", event.target.value)}
+                          />
+                        </div>
 
-                      <div className="space-y-1">
-                        <label className="text-[11px] font-semibold text-slate-500">Effective To</label>
-                        <Input
-                          type="date"
-                          value={schedule.effective_to}
-                          onChange={(event) => updateSchedule(index, "effective_to", event.target.value)}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                ))}
-
-                <Button
-                  variant="outline"
-                  onClick={() => setSchedules((prev) => [...prev, makeDefaultSchedule(doctorForm.consultation_duration_minutes)])}
-                  className="h-9 text-xs"
-                >
-                  <Plus className="h-4 w-4" /> Add Another Schedule
-                </Button>
-              </div>
-            ) : null}
-
-            {step === 2 ? (
-              <div className="space-y-3">
-                {timeOffs.map((timeOff, index) => (
-                  <div key={`timeoff-${index}`} className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
-                    <div className="mb-3 flex items-center justify-between">
-                      <p className="text-xs font-semibold text-slate-600">Time Off #{index + 1}</p>
-                      <button
-                        onClick={() =>
-                          setTimeOffs((prev) => prev.filter((_, rowIndex) => rowIndex !== index))
-                        }
-                        className="text-slate-400 transition hover:text-rose-500"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-
-                    <div className="grid gap-3 md:grid-cols-2">
-                      <div className="space-y-1">
-                        <label className="text-[11px] font-semibold text-slate-500">Start *</label>
-                        <Input
-                          type="datetime-local"
-                          value={timeOff.start_time}
-                          onChange={(event) => updateTimeOff(index, "start_time", event.target.value)}
-                        />
-                      </div>
-
-                      <div className="space-y-1">
-                        <label className="text-[11px] font-semibold text-slate-500">End *</label>
-                        <Input
-                          type="datetime-local"
-                          value={timeOff.end_time}
-                          onChange={(event) => updateTimeOff(index, "end_time", event.target.value)}
-                        />
-                      </div>
-
-                      <div className="space-y-1 md:col-span-2">
-                        <label className="text-[11px] font-semibold text-slate-500">Reason</label>
-                        <Input
-                          value={timeOff.reason}
-                          onChange={(event) => updateTimeOff(index, "reason", event.target.value)}
-                          placeholder="Annual Leave"
-                        />
+                        <div className="space-y-1 md:col-span-2">
+                          <label className="text-[11px] font-semibold text-slate-500">Reason</label>
+                          <Input
+                            value={timeOff.reason}
+                            onChange={(event) => updateTimeOff(index, "reason", event.target.value)}
+                            placeholder="Annual Leave"
+                          />
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
 
-                <Button
-                  variant="outline"
-                  onClick={() => setTimeOffs((prev) => [...prev, makeDefaultTimeOff()])}
-                  className="h-9 text-xs"
-                >
-                  <Plus className="h-4 w-4" /> Add Time Off
-                </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setTimeOffs((prev) => [...prev, makeDefaultTimeOff()])}
+                    className="h-9 text-xs"
+                  >
+                    <Plus className="h-4 w-4" /> Add Time Off
+                  </Button>
 
-                <p className="text-xs text-slate-400">
-                  Time off is optional. Add only if this doctor has known leaves.
-                </p>
-              </div>
-            ) : null}
+                  <p className="text-xs text-slate-400">
+                    Time off is optional. Add only if this doctor has known leaves.
+                  </p>
+                </div>
+              ) : null}
+            </div>
 
-            <div className="mt-2 flex items-center justify-between border-t border-slate-100 pt-4">
+            <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-4 flex-shrink-0 bg-white">
               <Button variant="outline" onClick={() => setStep((prev) => Math.max(prev - 1, 0))} disabled={isFirst}>
                 <ChevronLeft className="h-4 w-4" /> Back
               </Button>
