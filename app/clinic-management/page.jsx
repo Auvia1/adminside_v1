@@ -38,7 +38,7 @@ import ErrorMessage from "../components/ErrorMessage";
 import SuccessMessage from "../components/SuccessMessage";
 import LoadingSpinner from "../components/LoadingSpinner";
 import ProtectedRoute from "../components/ProtectedRoute";
-import { apiGet, apiPatch } from "../lib/api";
+import { apiGet, apiPatch, apiDelete } from "../lib/api";
 
 const defaultSettings = {
   advance_booking_days: 30,
@@ -329,6 +329,24 @@ function ClinicManagementPage() {
 
   const handleCreatePhoneNumber = (phoneNumberData) => {
     setPhoneNumbers((prev) => [phoneNumberData, ...prev]);
+  };
+
+  const handleDeletePhoneNumber = async (id, number) => {
+    if (!window.confirm(`Delete phone number "${number}"?`)) return;
+
+    try {
+      setPageError("");
+      const response = await apiDelete(`/phone-numbers/${id}`);
+      if (!response?.success) {
+        throw new Error(response?.error || "Failed to delete phone number");
+      }
+
+      setPhoneNumbers((prev) => prev.filter((item) => item.id !== id));
+      setSavedMessage("Phone number deleted successfully.");
+      setTimeout(() => setSavedMessage(""), 2500);
+    } catch (error) {
+      setPageError(error.message || "Failed to delete phone number.");
+    }
   };
 
   const handleCreateDoctor = (doctorData) => {
@@ -845,7 +863,7 @@ function ClinicManagementPage() {
           />
           <p className="mt-1 text-xs text-slate-400">Active VoIP lines managed by Auvia.</p>
           <div className="mt-4 space-y-2 rounded-2xl border border-slate-100 bg-white p-3">
-            <div className="grid grid-cols-[1.2fr_1fr_0.6fr_0.2fr] text-[10px] uppercase text-slate-400">
+            <div className="grid grid-cols-[1.2fr_1fr_0.6fr_0.4fr] text-[10px] uppercase text-slate-400">
               <span>Number</span>
               <span>Service Type</span>
               <span>Status</span>
@@ -853,14 +871,23 @@ function ClinicManagementPage() {
             {phoneNumbers.map((item) => (
               <div
                 key={item.id || item.number}
-                className="grid grid-cols-[1.2fr_1fr_0.6fr_0.2fr] items-center rounded-xl px-2 py-2 text-xs text-slate-600 transition hover:bg-slate-50"
+                className="grid grid-cols-[1.2fr_1fr_0.6fr_0.4fr] items-center rounded-xl px-2 py-2 text-xs text-slate-600 transition hover:bg-slate-50 group"
               >
                 <span>{item.number}</span>
                 <span>{item.type}</span>
                 <Badge className="w-fit bg-emerald-50 text-emerald-600">{item.status}</Badge>
-                <button className="justify-self-end text-slate-300 hover:text-slate-500">
-                  <Settings className="h-4 w-4" />
-                </button>
+                <div className="flex items-center justify-end gap-2 justify-self-end">
+                  <button className="text-slate-300 hover:text-slate-500">
+                    <Settings className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => handleDeletePhoneNumber(item.id, item.number)}
+                    className="text-slate-300 hover:text-red-500 transition opacity-0 group-hover:opacity-100"
+                    title="Delete phone number"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
             ))}
 
