@@ -52,6 +52,9 @@ const defaultSettings = {
   followup_time: "09:00",
   price_per_appointment: 500,
   documents: [],
+  system_prompt: "",
+  agent_name: "Anjali",
+  greeting_text: "Hello! How can I help you today?",
 };
 
 const languageOptions = [
@@ -102,6 +105,9 @@ function normalizeSettings(rawSettings) {
     followup_time: normalizeTime(rawSettings.followup_time),
     price_per_appointment: Number(rawSettings.price_per_appointment ?? 0),
     documents: Array.isArray(rawSettings.documents) ? rawSettings.documents : [],
+    system_prompt: rawSettings.system_prompt || "",
+    agent_name: rawSettings.agent_name || "Anjali",
+    greeting_text: rawSettings.greeting_text || "Hello! How can I help you today?",
   };
 }
 
@@ -315,6 +321,9 @@ function ClinicManagementPage() {
         // DB constraint expects null or a 10-15 digit numeric string.
         whatsapp_number: whatsappDigits || null,
         price_per_appointment: Number(settings.price_per_appointment || 0),
+        system_prompt: settings.system_prompt || null,
+        agent_name: settings.agent_name || "Anjali",
+        greeting_text: settings.greeting_text || "Hello! How can I help you today?",
       };
 
       const response = await apiPatch(`/clinics/${selectedClinicId}/settings`, payload);
@@ -503,7 +512,7 @@ function ClinicManagementPage() {
         setDocuments(Array.isArray(docsResponse?.data) ? docsResponse.data : []);
         setTotalFiles(docsResponse?.pagination?.total || 0);
       }
-    } catch {}
+    } catch { }
 
     if (successCount > 0) {
       setSavedMessage(`${successCount} document(s) uploaded & embedded${failCount > 0 ? ` (${failCount} failed)` : ""}`);
@@ -620,7 +629,7 @@ function ClinicManagementPage() {
               </div>
             </div>
 
-            <div className="space-y-1.5">
+            {/* <div className="space-y-1.5">
               <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-[0.1em] text-slate-400">
                 <Sparkles className="h-3 w-3" /> Price per Appointment
               </div>
@@ -634,6 +643,67 @@ function ClinicManagementPage() {
                   placeholder="0.00"
                   className="w-full bg-transparent text-xs text-slate-700 outline-none"
                 />
+              </div>
+            </div> */}
+            {/* ── AI Persona & Voice ─────────────────────────────── */}
+            <div className="rounded-2xl border border-slate-100 bg-slate-50/60 p-3 space-y-3">
+              <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-[0.1em] text-slate-400">
+                <Brain className="h-3 w-3" /> AI Persona &amp; Voice
+              </div>
+
+              {/* Agent Name */}
+              <div className="space-y-1">
+                <label className="text-[11px] font-semibold text-slate-500">Agent Name</label>
+                <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600 focus-within:border-(--brand-primary)/40 focus-within:ring-2 focus-within:ring-(--brand-primary)/10">
+                  <Bot className="h-3.5 w-3.5 flex-shrink-0 text-slate-400" />
+                  <input
+                    id="agent-name-input"
+                    type="text"
+                    value={settings.agent_name}
+                    onChange={(event) => update("agent_name", event.target.value)}
+                    placeholder="e.g. Anjali"
+                    className="w-full bg-transparent text-xs text-slate-700 outline-none"
+                  />
+                </div>
+              </div>
+
+              {/* Greeting Text */}
+              <div className="space-y-1">
+                <label className="text-[11px] font-semibold text-slate-500">Greeting Text</label>
+                <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs focus-within:border-(--brand-primary)/40 focus-within:ring-2 focus-within:ring-(--brand-primary)/10">
+                  <textarea
+                    id="greeting-text-input"
+                    rows={1}
+                    value={settings.greeting_text}
+                    onChange={(event) => update("greeting_text", event.target.value)}
+                    onInput={(event) => {
+                      event.target.style.height = "auto";
+                      event.target.style.height = event.target.scrollHeight + "px";
+                    }}
+                    placeholder="e.g. Hello! How can I help you today?"
+                    className="w-full resize-none overflow-hidden bg-transparent text-xs text-slate-700 outline-none placeholder:text-slate-400 min-h-[5rem]"
+                  />
+                </div>
+              </div>
+
+              {/* System Prompt */}
+              <div className="space-y-1">
+                <label className="text-[11px] font-semibold text-slate-500">System Prompt</label>
+                <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs focus-within:border-(--brand-primary)/40 focus-within:ring-2 focus-within:ring-(--brand-primary)/10">
+                  <textarea
+                    id="system-prompt-input"
+                    rows={1}
+                    value={settings.system_prompt}
+                    onChange={(event) => update("system_prompt", event.target.value)}
+                    onInput={(event) => {
+                      event.target.style.height = "auto";
+                      event.target.style.height = event.target.scrollHeight + "px";
+                    }}
+                    placeholder="Describe the AI agent's personality, tone, and instructions..."
+                    className="w-full resize-none overflow-hidden bg-transparent text-xs text-slate-700 outline-none placeholder:text-slate-400 leading-relaxed min-h-[12rem]"
+                  />
+                </div>
+                <p className="text-[10px] text-slate-400">Instructions given to the AI to define its behaviour and context.</p>
               </div>
             </div>
           </div>
@@ -735,11 +805,10 @@ function ClinicManagementPage() {
                 onDragLeave={(e) => { e.preventDefault(); setDragOver(false); }}
                 onDrop={(e) => { e.preventDefault(); setDragOver(false); handleFilesSelected(e.dataTransfer.files); }}
                 onClick={() => fileInputRef.current?.click()}
-                className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed px-4 py-8 text-sm transition-all duration-200 ${
-                  dragOver
-                    ? "border-(--brand-primary) bg-(--brand-primary)/5 scale-[1.01]"
-                    : "border-slate-200 bg-slate-50 hover:border-(--brand-primary)/50 hover:bg-(--brand-primary)/5"
-                }`}
+                className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed px-4 py-8 text-sm transition-all duration-200 ${dragOver
+                  ? "border-(--brand-primary) bg-(--brand-primary)/5 scale-[1.01]"
+                  : "border-slate-200 bg-slate-50 hover:border-(--brand-primary)/50 hover:bg-(--brand-primary)/5"
+                  }`}
               >
                 <div className={`rounded-full p-2 transition-colors ${dragOver ? "bg-(--brand-primary)/10" : "bg-slate-100"}`}>
                   <Upload className={`h-5 w-5 ${dragOver ? "text-(--brand-primary)" : "text-(--brand-primary)"}`} />
@@ -790,13 +859,12 @@ function ClinicManagementPage() {
                           </p>
                         </div>
                         {/* Status Badge */}
-                        <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold flex-shrink-0 ${
-                          item.status === "uploading" ? "bg-blue-50 text-blue-600" :
+                        <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold flex-shrink-0 ${item.status === "uploading" ? "bg-blue-50 text-blue-600" :
                           item.status === "embedding" ? "bg-purple-50 text-purple-600" :
-                          item.status === "success" ? "bg-emerald-50 text-emerald-600" :
-                          item.status === "error" ? "bg-red-50 text-red-600" :
-                          "bg-slate-100 text-slate-500"
-                        }`}>
+                            item.status === "success" ? "bg-emerald-50 text-emerald-600" :
+                              item.status === "error" ? "bg-red-50 text-red-600" :
+                                "bg-slate-100 text-slate-500"
+                          }`}>
                           {item.status === "uploading" && <Loader2 className="h-3 w-3 animate-spin" />}
                           {item.status === "embedding" && <Brain className="h-3 w-3 animate-pulse" />}
                           {item.status === "success" && <CheckCircle2 className="h-3 w-3" />}
@@ -840,7 +908,7 @@ function ClinicManagementPage() {
               {documents?.length > 0 ? (
                 <div className="space-y-2">
                   <p className="text-[10px] uppercase text-slate-400">Uploaded Files ({documents.length})</p>
-                  <div className="space-y-1 max-h-48 overflow-y-auto">
+                  <div className="space-y-1 max-h-[5.5rem] overflow-y-auto scroll-smooth pr-0.5">
                     {documents.map((doc) => (
                       <div key={doc.id} className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50 px-3 py-2 text-xs text-slate-600 hover:bg-slate-100 transition group">
                         <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -974,9 +1042,8 @@ function ClinicManagementPage() {
             </SettingRow>
 
             <div
-              className={`flex flex-wrap gap-2 rounded-2xl border border-slate-100 bg-slate-50 px-3 py-3 transition-opacity ${
-                !settings.ai_agent_enabled ? "pointer-events-none opacity-40" : ""
-              }`}
+              className={`flex flex-wrap gap-2 rounded-2xl border border-slate-100 bg-slate-50 px-3 py-3 transition-opacity ${!settings.ai_agent_enabled ? "pointer-events-none opacity-40" : ""
+                }`}
             >
               {languageOptions.map((language) => {
                 const isActive = settings.ai_agent_languages.includes(language.value);
@@ -984,11 +1051,10 @@ function ClinicManagementPage() {
                   <button
                     key={language.value}
                     onClick={() => toggleLanguage(language.value)}
-                    className={`flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-semibold transition hover:-translate-y-0.5 ${
-                      isActive
-                        ? "border-(--brand-primary)/30 bg-(--brand-primary)/10 text-(--brand-primary)"
-                        : "border-slate-200 bg-white text-slate-500 hover:border-slate-300"
-                    }`}
+                    className={`flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-semibold transition hover:-translate-y-0.5 ${isActive
+                      ? "border-(--brand-primary)/30 bg-(--brand-primary)/10 text-(--brand-primary)"
+                      : "border-slate-200 bg-white text-slate-500 hover:border-slate-300"
+                      }`}
                   >
                     {isActive && <Check className="h-3 w-3" />}
                     {language.flag} {language.label}
