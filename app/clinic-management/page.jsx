@@ -62,6 +62,7 @@ const defaultSettings = {
   system_prompt: "",
   agent_name: "Anjali",
   greeting_text: "Hello! How can I help you today?",
+  is_slots_needed: true,
   // Meta / WhatsApp
   meta_access_token: "",
   meta_phone_number_id: "",
@@ -130,6 +131,7 @@ function normalizeSettings(rawSettings) {
     system_prompt: rawSettings.system_prompt || "",
     agent_name: rawSettings.agent_name || "Anjali",
     greeting_text: rawSettings.greeting_text || "Hello! How can I help you today?",
+    is_slots_needed: rawSettings.is_slots_needed !== undefined ? Boolean(rawSettings.is_slots_needed) : true,
     // Meta / WhatsApp
     meta_access_token: rawSettings.meta_access_token || "",
     meta_phone_number_id: rawSettings.meta_phone_number_id || "",
@@ -398,6 +400,7 @@ function ClinicManagementPage() {
         system_prompt: settings.system_prompt || null,
         agent_name: settings.agent_name || "Anjali",
         greeting_text: settings.greeting_text || "Hello! How can I help you today?",
+        is_slots_needed: Boolean(settings.is_slots_needed),
         // Meta / WhatsApp
         meta_access_token: settings.meta_access_token || null,
         meta_phone_number_id: settings.meta_phone_number_id || null,
@@ -707,15 +710,27 @@ function ClinicManagementPage() {
                 </p>
               </div>
             </div>
-            <div className="flex items-center justify-between rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
-              <div className="flex items-center gap-2">
-                <Sparkles className="h-4 w-4" />
-                Product Status
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-[0.1em] text-slate-400">
+                <ClipboardList className="h-3 w-3" /> Booking Mode
               </div>
-              <div className="flex items-center gap-2">
-                Using Auvia
-                <Badge className="bg-emerald-100 text-emerald-700">Active</Badge>
+              <div className="relative flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs focus-within:border-(--brand-primary)/40 focus-within:ring-2 focus-within:ring-(--brand-primary)/10">
+                <select
+                  id="booking-mode-select"
+                  value={settings.is_slots_needed ? "slots" : "tokens"}
+                  onChange={(e) => update("is_slots_needed", e.target.value === "slots")}
+                  className="w-full appearance-none bg-transparent text-xs text-slate-700 outline-none pr-4"
+                >
+                  <option value="slots">Slot-based booking</option>
+                  <option value="tokens">Token-based booking</option>
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-3 h-3.5 w-3.5 text-slate-400" />
               </div>
+              <p className="text-[10px] text-slate-400">
+                {settings.is_slots_needed
+                  ? "Patients book a specific date & time slot."
+                  : "Patients receive a queue token — no fixed time."}
+              </p>
             </div>
 
             {/* <div className="space-y-1.5">
@@ -789,7 +804,7 @@ function ClinicManagementPage() {
                       event.target.style.height = event.target.scrollHeight + "px";
                     }}
                     placeholder="Describe the AI agent's personality, tone, and instructions..."
-                    className="w-full resize-none overflow-hidden bg-transparent text-xs text-slate-700 outline-none placeholder:text-slate-400 leading-relaxed min-h-[12rem]"
+                    className="w-full resize-none overflow-hidden bg-transparent text-xs text-slate-700 outline-none placeholder:text-slate-400 leading-relaxed min-h-[150px]"
                   />
                 </div>
                 <p className="text-[10px] text-slate-400">Instructions given to the AI to define its behaviour and context.</p>
