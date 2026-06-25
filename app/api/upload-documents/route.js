@@ -1,6 +1,19 @@
 import { Storage } from "@google-cloud/storage";
+import { createClient } from "@supabase/supabase-js";
 
 export const runtime = "nodejs";
+
+let supabase = null;
+function getSupabase() {
+  if (supabase) return supabase;
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) {
+    throw new Error("Supabase credentials not configured in environment variables");
+  }
+  supabase = createClient(url, key);
+  return supabase;
+}
 
 // Initialize Google Cloud Storage
 function initializeStorageClient() {
@@ -128,29 +141,29 @@ export async function POST(request) {
       });
     }
 
-    // Save metadata to database via documents API
+    // Save metadata to database directly
     console.log(`\n💾 [UPLOAD] Saving ${documentsToCreate.length} document metadata to database...`);
-    const protocol = request.headers.get("x-forwarded-proto") || "http";
-    const host = request.headers.get("host");
-    const baseUrl = `${protocol}://${host}`;
-
     try {
-      const dbResponse = await fetch(`${baseUrl}/api/documents/bulk`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          clinic_id: clinicId,
-          documents: documentsToCreate,
-        }),
-      });
+      const supabaseClient = getSupabase();
+      const docsToInsert = documentsToCreate.map(doc => ({
+        clinic_id: clinicId,
+        file_name: doc.file_name,
+        file_url: doc.file_url,
+        file_type: doc.file_type || null,
+        file_size: doc.file_size || null,
+        doc_type: doc.doc_type || null,
+        created_at: new Date().toISOString(),
+      }));
 
-      const dbResult = await dbResponse.json();
-      if (!dbResult.success) {
-        console.warn(`⚠️ [UPLOAD] Failed to save metadata: ${dbResult.error}`);
+      const { data: dbData, error: dbError } = await supabaseClient
+        .from("clinic_documents")
+        .insert(docsToInsert)
+        .select();
+
+      if (dbError) {
+        console.warn(`⚠️ [UPLOAD] Failed to save metadata to database: ${dbError.message}`);
       } else {
-        console.log(`✅ [UPLOAD] ${dbResult.data.length} documents saved to database`);
+        console.log(`✅ [UPLOAD] ${dbData.length} documents saved to database directly`);
       }
     } catch (dbError) {
       console.warn(`⚠️ [UPLOAD] Error saving metadata to database:`, dbError.message);

@@ -1,6 +1,5 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { createClient } from "@supabase/supabase-js";
-import { PDFParse } from "pdf-parse";
 
 export const runtime = "nodejs";
 const MAX_CHUNK_SIZE = 1000;
@@ -160,13 +159,14 @@ export async function POST(request) {
       if (fileName.toLowerCase().endsWith(".pdf")) {
         console.log(`📄 [STEP 2] Parsing PDF file: ${fileName}`);
         try {
+          const { PDFParse } = await import("pdf-parse");
           const parser = new PDFParse({ data: buffer });
           const pdfData = await parser.getText();
           fileContent = pdfData.text;
         } catch (err) {
           console.error("❌ [STEP 2] Failed to parse PDF:", err);
           return Response.json(
-            { success: false, error: "Failed to parse PDF file" },
+            { success: false, error: "Failed to parse PDF file: " + err.message },
             { status: 400 }
           );
         }
