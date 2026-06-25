@@ -165,6 +165,7 @@ function ClinicManagementPage() {
   const [isUploading, setIsUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef(null);
+  const [deletingDocId, setDeletingDocId] = useState(null);
 
   const update = (key, value) => {
     setSettings((prev) => ({ ...prev, [key]: value }));
@@ -363,10 +364,15 @@ function ClinicManagementPage() {
   };
 
   const handleDeleteDocument = async (docId, docName) => {
-    if (!window.confirm(`Delete "${docName}"?`)) return;
+    if (
+      !window.confirm(
+        `Delete "${docName}"?\n\nThis will permanently remove:\n• The file from Google Cloud Storage\n• All AI vector embeddings for this document\n• The document record from the database\n\nThis action cannot be undone.`
+      )
+    ) return;
 
     try {
       setPageError("");
+      setDeletingDocId(docId);
       const response = await fetch(`/api/documents/${docId}`, { method: "DELETE" });
       const data = await response.json();
 
@@ -376,10 +382,18 @@ function ClinicManagementPage() {
 
       setDocuments((prev) => prev.filter((doc) => doc.id !== docId));
       setTotalFiles((prev) => Math.max(0, prev - 1));
-      setSavedMessage("Document deleted successfully.");
-      setTimeout(() => setSavedMessage(""), 2500);
+
+      const warnings = data.details?.warnings;
+      if (warnings && warnings.length > 0) {
+        setSavedMessage(`"${docName}" deleted (with warnings: ${warnings.join("; ")})`);
+      } else {
+        setSavedMessage(`"${docName}" deleted — file, embeddings & record removed.`);
+      }
+      setTimeout(() => setSavedMessage(""), 4000);
     } catch (error) {
       setPageError(error.message || "Failed to delete document.");
+    } finally {
+      setDeletingDocId(null);
     }
   };
 
@@ -842,10 +856,14 @@ function ClinicManagementPage() {
                           <Check className="h-4 w-4 text-emerald-500" />
                           <button
                             onClick={() => handleDeleteDocument(doc.id, doc.file_name)}
-                            className="text-slate-300 hover:text-red-500 transition opacity-0 group-hover:opacity-100"
-                            title="Delete document"
+                            disabled={deletingDocId === doc.id}
+                            className="text-slate-300 hover:text-red-500 transition opacity-0 group-hover:opacity-100 disabled:opacity-100 disabled:cursor-not-allowed"
+                            title="Delete document (removes file, embeddings & record)"
                           >
-                            <Trash2 className="h-4 w-4" />
+                            {deletingDocId === doc.id
+                              ? <Loader2 className="h-4 w-4 animate-spin text-red-400" />
+                              : <Trash2 className="h-4 w-4" />
+                            }
                           </button>
                         </div>
                       </div>

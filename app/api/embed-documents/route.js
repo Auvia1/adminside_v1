@@ -138,7 +138,7 @@ export async function POST(request) {
     console.log("✅ [STEP 1] Clients ready");
 
     let clinicId, fileName, fileContent;
-    
+
     const contentType = request.headers.get("content-type") || "";
     if (contentType.includes("multipart/form-data")) {
       console.log("📄 [STEP 2] Parsing FormData request...");
@@ -245,7 +245,6 @@ export async function POST(request) {
         chunk_text: sanitizeText(emb.chunk_text),
         embedding: emb.embedding,
         clinic_id: emb.clinic_id,
-        file_name: emb.file_name,
       }));
 
       // Insert into clinic_knowledge
