@@ -245,6 +245,7 @@ export async function POST(request) {
         chunk_text: sanitizeText(emb.chunk_text),
         embedding: emb.embedding,
         clinic_id: emb.clinic_id,
+        file_name: emb.file_name,
       }));
 
       // Insert into clinic_knowledge
