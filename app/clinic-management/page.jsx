@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useCallback, useEffect, useState, useRef } from "react";
+import { useMemo, useCallback, useEffect, useState, useRef, useContext } from "react";
 import {
   Bell,
   ChevronDown,
@@ -27,6 +27,12 @@ import {
   FileText,
   X,
   Pencil,
+  Phone,
+  CreditCard,
+  Webhook,
+  KeyRound,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
@@ -41,6 +47,7 @@ import SuccessMessage from "../components/SuccessMessage";
 import LoadingSpinner from "../components/LoadingSpinner";
 import ProtectedRoute from "../components/ProtectedRoute";
 import { apiGet, apiPatch, apiDelete } from "../lib/api";
+import { AuthContext } from "../context/AuthContext";
 
 const defaultSettings = {
   advance_booking_days: 30,
@@ -55,6 +62,21 @@ const defaultSettings = {
   system_prompt: "",
   agent_name: "Anjali",
   greeting_text: "Hello! How can I help you today?",
+  // Meta / WhatsApp
+  meta_access_token: "",
+  meta_phone_number_id: "",
+  whatsapp_verify_token: "",
+  // Payment
+  payment_provider: "razorpay",
+  razorpay_key_id: "",
+  razorpay_key_secret: "",
+  razorpay_webhook_secret: "",
+  payu_merchant_key: "",
+  payu_merchant_salt: "",
+  // Telephony
+  telephony_provider: "vobiz",
+  vobiz_auth_id: "",
+  vobiz_auth_token: "",
 };
 
 const languageOptions = [
@@ -108,6 +130,21 @@ function normalizeSettings(rawSettings) {
     system_prompt: rawSettings.system_prompt || "",
     agent_name: rawSettings.agent_name || "Anjali",
     greeting_text: rawSettings.greeting_text || "Hello! How can I help you today?",
+    // Meta / WhatsApp
+    meta_access_token: rawSettings.meta_access_token || "",
+    meta_phone_number_id: rawSettings.meta_phone_number_id || "",
+    whatsapp_verify_token: rawSettings.whatsapp_verify_token || "",
+    // Payment
+    payment_provider: rawSettings.payment_provider || "razorpay",
+    razorpay_key_id: rawSettings.razorpay_key_id || "",
+    razorpay_key_secret: rawSettings.razorpay_key_secret || "",
+    razorpay_webhook_secret: rawSettings.razorpay_webhook_secret || "",
+    payu_merchant_key: rawSettings.payu_merchant_key || "",
+    payu_merchant_salt: rawSettings.payu_merchant_salt || "",
+    // Telephony
+    telephony_provider: rawSettings.telephony_provider || "vobiz",
+    vobiz_auth_id: rawSettings.vobiz_auth_id || "",
+    vobiz_auth_token: rawSettings.vobiz_auth_token || "",
   };
 }
 
@@ -142,6 +179,40 @@ function SectionHeader({ icon: Icon, title, action }) {
   );
 }
 
+/**
+ * SecretInput — always shows the value as password.
+ * If the logged-in admin is a superadmin, an eye icon appears
+ * that temporarily reveals the plain-text value on hold/click.
+ */
+function SecretInput({ id, value, onChange, placeholder, isSuperAdmin }) {
+  const [visible, setVisible] = useState(false);
+  return (
+    <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs focus-within:border-(--brand-primary)/40 focus-within:ring-2 focus-within:ring-(--brand-primary)/10">
+      <KeyRound className="h-3.5 w-3.5 flex-shrink-0 text-slate-400" />
+      <input
+        id={id}
+        type={visible ? "text" : "password"}
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+        className="w-full bg-transparent text-xs text-slate-700 outline-none"
+      />
+      {isSuperAdmin && (
+        <button
+          type="button"
+          onClick={() => setVisible((v) => !v)}
+          className="flex-shrink-0 text-slate-300 hover:text-(--brand-primary) transition-colors"
+          title={visible ? "Hide value" : "Reveal value"}
+        >
+          {visible
+            ? <EyeOff className="h-3.5 w-3.5" />
+            : <Eye className="h-3.5 w-3.5" />}
+        </button>
+      )}
+    </div>
+  );
+}
+
 export default function ClinicManagementPageWrapper() {
   return (
     <ProtectedRoute>
@@ -151,6 +222,9 @@ export default function ClinicManagementPageWrapper() {
 }
 
 function ClinicManagementPage() {
+  const { admin } = useContext(AuthContext);
+  const isSuperAdmin = admin?.role === "superadmin";
+
   const [clinics, setClinics] = useState([]);
   const [selectedClinicId, setSelectedClinicId] = useState("");
   const [selectedClinicData, setSelectedClinicData] = useState(null);
@@ -324,6 +398,21 @@ function ClinicManagementPage() {
         system_prompt: settings.system_prompt || null,
         agent_name: settings.agent_name || "Anjali",
         greeting_text: settings.greeting_text || "Hello! How can I help you today?",
+        // Meta / WhatsApp
+        meta_access_token: settings.meta_access_token || null,
+        meta_phone_number_id: settings.meta_phone_number_id || null,
+        whatsapp_verify_token: settings.whatsapp_verify_token || null,
+        // Payment
+        payment_provider: settings.payment_provider || "razorpay",
+        razorpay_key_id: settings.razorpay_key_id || null,
+        razorpay_key_secret: settings.razorpay_key_secret || null,
+        razorpay_webhook_secret: settings.razorpay_webhook_secret || null,
+        payu_merchant_key: settings.payu_merchant_key || null,
+        payu_merchant_salt: settings.payu_merchant_salt || null,
+        // Telephony
+        telephony_provider: settings.telephony_provider || "vobiz",
+        vobiz_auth_id: settings.vobiz_auth_id || null,
+        vobiz_auth_token: settings.vobiz_auth_token || null,
       };
 
       const response = await apiPatch(`/clinics/${selectedClinicId}/settings`, payload);
@@ -1119,6 +1208,180 @@ function ClinicManagementPage() {
             ) : null}
           </div>
         </Card>
+      </div>
+
+      {/* ─── Integrations Row ───────────────────────────────────── */}
+      <div className="mt-6 grid gap-4 lg:grid-cols-3">
+
+        {/* Meta / WhatsApp Credentials */}
+        <Card className="p-5">
+          <SectionHeader icon={Webhook} title="Meta / WhatsApp" />
+          <p className="mt-1 text-xs text-slate-400">WhatsApp Business API credentials for the Meta integration.</p>
+          <div className="mt-4 space-y-3">
+
+            <div className="space-y-1">
+              <label className="text-[11px] font-semibold text-slate-500">Access Token</label>
+              <SecretInput
+                id="meta-access-token-input"
+                value={settings.meta_access_token ?? ""}
+                onChange={(e) => update("meta_access_token", e.target.value)}
+                placeholder="EAAxxxxxx..."
+                isSuperAdmin={isSuperAdmin}
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[11px] font-semibold text-slate-500">Phone Number ID</label>
+              <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs focus-within:border-(--brand-primary)/40 focus-within:ring-2 focus-within:ring-(--brand-primary)/10">
+                <Phone className="h-3.5 w-3.5 flex-shrink-0 text-slate-400" />
+                <input
+                  id="meta-phone-number-id-input"
+                  type="text"
+                  value={settings.meta_phone_number_id ?? ""}
+                  onChange={(e) => update("meta_phone_number_id", e.target.value)}
+                  placeholder="123456789012345"
+                  className="w-full bg-transparent text-xs text-slate-700 outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[11px] font-semibold text-slate-500">Webhook Verify Token</label>
+              <SecretInput
+                id="whatsapp-verify-token-input"
+                value={settings.whatsapp_verify_token ?? ""}
+                onChange={(e) => update("whatsapp_verify_token", e.target.value)}
+                placeholder="my_secure_verify_token"
+                isSuperAdmin={isSuperAdmin}
+              />
+            </div>
+
+          </div>
+        </Card>
+
+        {/* Payment Gateway */}
+        <Card className="p-5">
+          <SectionHeader icon={CreditCard} title="Payment Gateway" />
+          <p className="mt-1 text-xs text-slate-400">Configure Razorpay or PayU as the active payment provider.</p>
+          <div className="mt-4 space-y-3">
+
+            {/* Provider selector */}
+            <div className="space-y-1">
+              <label className="text-[11px] font-semibold text-slate-500">Provider</label>
+              <div className="relative flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs focus-within:border-(--brand-primary)/40 focus-within:ring-2 focus-within:ring-(--brand-primary)/10">
+                <CreditCard className="h-3.5 w-3.5 flex-shrink-0 text-slate-400" />
+                <select
+                  id="payment-provider-select"
+                  value={settings.payment_provider ?? "razorpay"}
+                  onChange={(e) => update("payment_provider", e.target.value)}
+                  className="w-full appearance-none bg-transparent text-xs text-slate-700 outline-none pr-4"
+                >
+                  <option value="razorpay">Razorpay</option>
+                  <option value="payu">PayU</option>
+                  <option value="none">None</option>
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-3 h-3.5 w-3.5 text-slate-400" />
+              </div>
+            </div>
+
+            {/* Razorpay fields */}
+            {settings.payment_provider === "razorpay" && (
+              <div className="space-y-2 rounded-xl border border-slate-100 bg-slate-50/60 p-2.5">
+                <p className="text-[10px] uppercase tracking-wide text-slate-400">Razorpay</p>
+                <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs focus-within:border-(--brand-primary)/40 focus-within:ring-2 focus-within:ring-(--brand-primary)/10">
+                  <KeyRound className="h-3.5 w-3.5 flex-shrink-0 text-slate-400" />
+                  <input id="rzp-key-id" type="text" value={settings.razorpay_key_id ?? ""} onChange={(e) => update("razorpay_key_id", e.target.value)} placeholder="Key ID (rzp_live_...)" className="w-full bg-transparent text-xs text-slate-700 outline-none" />
+                </div>
+                <SecretInput
+                  id="rzp-key-secret"
+                  value={settings.razorpay_key_secret ?? ""}
+                  onChange={(e) => update("razorpay_key_secret", e.target.value)}
+                  placeholder="Key Secret"
+                  isSuperAdmin={isSuperAdmin}
+                />
+                <SecretInput
+                  id="rzp-webhook-secret"
+                  value={settings.razorpay_webhook_secret ?? ""}
+                  onChange={(e) => update("razorpay_webhook_secret", e.target.value)}
+                  placeholder="Webhook Secret"
+                  isSuperAdmin={isSuperAdmin}
+                />
+              </div>
+            )}
+
+            {/* PayU fields */}
+            {settings.payment_provider === "payu" && (
+              <div className="space-y-2 rounded-xl border border-slate-100 bg-slate-50/60 p-2.5">
+                <p className="text-[10px] uppercase tracking-wide text-slate-400">PayU</p>
+                <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs focus-within:border-(--brand-primary)/40 focus-within:ring-2 focus-within:ring-(--brand-primary)/10">
+                  <KeyRound className="h-3.5 w-3.5 flex-shrink-0 text-slate-400" />
+                  <input id="payu-merchant-key" type="text" value={settings.payu_merchant_key ?? ""} onChange={(e) => update("payu_merchant_key", e.target.value)} placeholder="Merchant Key" className="w-full bg-transparent text-xs text-slate-700 outline-none" />
+                </div>
+                <SecretInput
+                  id="payu-merchant-salt"
+                  value={settings.payu_merchant_salt ?? ""}
+                  onChange={(e) => update("payu_merchant_salt", e.target.value)}
+                  placeholder="Merchant Salt"
+                  isSuperAdmin={isSuperAdmin}
+                />
+              </div>
+            )}
+
+          </div>
+        </Card>
+
+        {/* Telephony */}
+        <Card className="p-5">
+          <SectionHeader icon={Phone} title="Telephony" />
+          <p className="mt-1 text-xs text-slate-400">Outbound call provider credentials for voice agent calls.</p>
+          <div className="mt-4 space-y-3">
+
+            {/* Provider selector */}
+            <div className="space-y-1">
+              <label className="text-[11px] font-semibold text-slate-500">Provider</label>
+              <div className="relative flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs focus-within:border-(--brand-primary)/40 focus-within:ring-2 focus-within:ring-(--brand-primary)/10">
+                <Phone className="h-3.5 w-3.5 flex-shrink-0 text-slate-400" />
+                <select
+                  id="telephony-provider-select"
+                  value={settings.telephony_provider ?? "vobiz"}
+                  onChange={(e) => update("telephony_provider", e.target.value)}
+                  className="w-full appearance-none bg-transparent text-xs text-slate-700 outline-none pr-4"
+                >
+                  <option value="vobiz">Vobiz</option>
+                  <option value="exotel">Exotel</option>
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-3 h-3.5 w-3.5 text-slate-400" />
+              </div>
+            </div>
+
+            {/* Vobiz fields */}
+            {settings.telephony_provider === "vobiz" && (
+              <div className="space-y-2 rounded-xl border border-slate-100 bg-slate-50/60 p-2.5">
+                <p className="text-[10px] uppercase tracking-wide text-slate-400">Vobiz</p>
+                <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs focus-within:border-(--brand-primary)/40 focus-within:ring-2 focus-within:ring-(--brand-primary)/10">
+                  <KeyRound className="h-3.5 w-3.5 flex-shrink-0 text-slate-400" />
+                  <input id="vobiz-auth-id" type="text" value={settings.vobiz_auth_id ?? ""} onChange={(e) => update("vobiz_auth_id", e.target.value)} placeholder="Auth ID" className="w-full bg-transparent text-xs text-slate-700 outline-none" />
+                </div>
+                <SecretInput
+                  id="vobiz-auth-token"
+                  value={settings.vobiz_auth_token ?? ""}
+                  onChange={(e) => update("vobiz_auth_token", e.target.value)}
+                  placeholder="Auth Token"
+                  isSuperAdmin={isSuperAdmin}
+                />
+              </div>
+            )}
+
+            {/* Exotel — no extra creds needed beyond provider selection */}
+            {settings.telephony_provider === "exotel" && (
+              <div className="rounded-xl border border-slate-100 bg-slate-50/60 px-3 py-3 text-xs text-slate-500">
+                Exotel selected. Add any required Exotel credentials here when available.
+              </div>
+            )}
+
+          </div>
+        </Card>
+
       </div>
     </div>
   );
