@@ -66,6 +66,7 @@ export default function EditDoctorDialog({ doctorItem, clinicId, onUpdate, child
     consultation_duration_minutes: 30,
     max_appointments_per_day: 10,
     is_active: true,
+    price_charged: "",
   });
   const [isSavingInfo, setIsSavingInfo] = useState(false);
   const [infoError, setInfoError] = useState("");
@@ -88,6 +89,7 @@ export default function EditDoctorDialog({ doctorItem, clinicId, onUpdate, child
         consultation_duration_minutes: doctorItem.consultationDuration ?? 30,
         max_appointments_per_day: doctorItem.maxAppointmentsPerDay ?? 10,
         is_active: doctorItem.isActive ?? true,
+        price_charged: doctorItem.priceCharged != null ? String(doctorItem.priceCharged) : "",
       });
       setInfoError("");
       setInfoSuccess(false);
@@ -156,6 +158,7 @@ export default function EditDoctorDialog({ doctorItem, clinicId, onUpdate, child
         consultation_duration_minutes: Number(form.consultation_duration_minutes),
         max_appointments_per_day: Number(form.max_appointments_per_day),
         is_active: Boolean(form.is_active),
+        price_charged: form.price_charged !== "" ? Number(form.price_charged) : null,
       };
       const res = await apiPatch(`/doctors/${doctorItem.id}`, payload);
       if (!res?.success) throw new Error(res?.error || "Failed to update doctor.");
@@ -169,6 +172,7 @@ export default function EditDoctorDialog({ doctorItem, clinicId, onUpdate, child
           consultationDuration: updated.consultation_duration_minutes ?? Number(form.consultation_duration_minutes),
           maxAppointmentsPerDay: updated.max_appointments_per_day ?? Number(form.max_appointments_per_day),
           isActive: updated.is_active !== undefined ? Boolean(updated.is_active) : form.is_active,
+          priceCharged: updated.price_charged != null ? updated.price_charged : (form.price_charged !== "" ? Number(form.price_charged) : null),
         });
       }
       setInfoSuccess(true);
@@ -354,6 +358,22 @@ export default function EditDoctorDialog({ doctorItem, clinicId, onUpdate, child
                     onChange={(e) => updateField("max_appointments_per_day", Number(e.target.value))}
                   />
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-semibold text-slate-500">Consultation Fee (₹)</label>
+                <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus-within:border-(--brand-primary)/40 focus-within:ring-2 focus-within:ring-(--brand-primary)/10">
+                  <span className="font-semibold text-slate-400 text-xs">₹</span>
+                  <input
+                    type="number"
+                    min={0}
+                    value={form.price_charged}
+                    onChange={(e) => updateField("price_charged", e.target.value)}
+                    placeholder="0.00"
+                    className="w-full bg-transparent text-xs text-slate-700 outline-none"
+                  />
+                </div>
+                <p className="text-[10px] text-slate-400">Leave empty to use clinic default pricing.</p>
               </div>
 
               <div className="space-y-2">

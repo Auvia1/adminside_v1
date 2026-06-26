@@ -72,6 +72,7 @@ export default function NewDoctorDialog({ clinicId, onCreate, triggerClassName }
     consultation_duration_minutes: 30,
     buffer_time_minutes: 0,
     max_appointments_per_day: 10,
+    price_charged: "",
   });
   const [schedules, setSchedules] = useState([makeDefaultSchedule(doctorForm.consultation_duration_minutes)]);
   const [timeOffs, setTimeOffs] = useState([]);
@@ -90,6 +91,7 @@ export default function NewDoctorDialog({ clinicId, onCreate, triggerClassName }
       consultation_duration_minutes: 30,
       buffer_time_minutes: 0,
       max_appointments_per_day: 10,
+      price_charged: "",
     });
     setSchedules([makeDefaultSchedule(30)]);
     setTimeOffs([]);
@@ -176,6 +178,7 @@ export default function NewDoctorDialog({ clinicId, onCreate, triggerClassName }
         consultation_duration_minutes: Number(doctorForm.consultation_duration_minutes),
         buffer_time_minutes: Number(doctorForm.buffer_time_minutes),
         max_appointments_per_day: Number(doctorForm.max_appointments_per_day),
+        price_charged: doctorForm.price_charged !== "" ? Number(doctorForm.price_charged) : undefined,
       });
 
       if (!createDoctorResponse?.success) {
@@ -335,6 +338,21 @@ export default function NewDoctorDialog({ clinicId, onCreate, triggerClassName }
                         updateDoctor("max_appointments_per_day", Number(event.target.value))
                       }
                     />
+                  </div>
+                  <div className="space-y-2 md:col-span-2">
+                    <label className="text-xs font-semibold text-slate-500">Consultation Fee (₹)</label>
+                    <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus-within:border-(--brand-primary)/40 focus-within:ring-2 focus-within:ring-(--brand-primary)/10">
+                      <span className="font-semibold text-slate-400 text-xs">₹</span>
+                      <input
+                        type="number"
+                        min={0}
+                        value={doctorForm.price_charged}
+                        onChange={(event) => updateDoctor("price_charged", event.target.value)}
+                        placeholder="0.00"
+                        className="w-full bg-transparent text-xs text-slate-700 outline-none"
+                      />
+                    </div>
+                    <p className="text-[10px] text-slate-400">Leave empty to use clinic default pricing.</p>
                   </div>
                 </div>
               ) : null}

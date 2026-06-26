@@ -348,6 +348,7 @@ function ClinicManagementPage() {
           consultationDuration: item.consultation_duration_minutes || 30,
           maxAppointmentsPerDay: item.max_appointments_per_day || 0,
           isActive: Boolean(item.is_active),
+          priceCharged: item.price_charged != null ? item.price_charged : null,
         }))
       );
     } catch (error) {
