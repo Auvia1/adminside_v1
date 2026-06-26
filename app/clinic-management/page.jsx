@@ -42,6 +42,7 @@ import { Input } from "../components/ui/input";
 import NewPhoneNumberDialog from "../components/NewPhoneNumberDialog";
 import EditPhoneNumberDialog from "../components/EditPhoneNumberDialog";
 import NewDoctorDialog from "../components/NewDoctorDialog";
+import EditDoctorDialog from "../components/EditDoctorDialog";
 import ErrorMessage from "../components/ErrorMessage";
 import SuccessMessage from "../components/SuccessMessage";
 import LoadingSpinner from "../components/LoadingSpinner";
@@ -462,6 +463,30 @@ function ClinicManagementPage() {
 
   const handleCreateDoctor = (doctorData) => {
     setDoctors((prev) => [doctorData, ...prev]);
+  };
+
+  const handleDeleteDoctor = async (id, name) => {
+    if (!window.confirm(`Delete doctor "${name}"? This action cannot be undone.`)) return;
+
+    try {
+      setPageError("");
+      const response = await apiDelete(`/doctors/${id}`);
+      if (!response?.success) {
+        throw new Error(response?.error || "Failed to delete doctor");
+      }
+
+      setDoctors((prev) => prev.filter((d) => d.id !== id));
+      setSavedMessage(`Doctor "${name}" deleted successfully.`);
+      setTimeout(() => setSavedMessage(""), 2500);
+    } catch (error) {
+      setPageError(error.message || "Failed to delete doctor.");
+    }
+  };
+
+  const handleUpdateDoctor = (updatedDoctor) => {
+    setDoctors((prev) =>
+      prev.map((d) => (d.id === updatedDoctor.id ? updatedDoctor : d))
+    );
   };
 
   const handleDeleteDocument = async (docId, docName) => {
@@ -1193,18 +1218,19 @@ function ClinicManagementPage() {
           <p className="mt-1 text-xs text-slate-400">All active doctors configured for this clinic.</p>
 
           <div className="mt-4 space-y-2 rounded-2xl border border-slate-100 bg-white p-3">
-            <div className="grid grid-cols-[1.4fr_1fr_0.8fr_0.7fr_0.4fr] text-[10px] uppercase text-slate-400">
+            <div className="grid grid-cols-[1.4fr_1fr_0.8fr_0.7fr_0.5fr_0.4fr] text-[10px] uppercase text-slate-400">
               <span>Name</span>
               <span>Speciality</span>
               <span>Duration</span>
               <span>Max/Day</span>
               <span>Status</span>
+              <span></span>
             </div>
 
             {doctors.map((doctor) => (
               <div
                 key={doctor.id}
-                className="grid grid-cols-[1.4fr_1fr_0.8fr_0.7fr_0.4fr] items-center rounded-xl px-2 py-2 text-xs text-slate-600 transition hover:bg-slate-50"
+                className="grid grid-cols-[1.4fr_1fr_0.8fr_0.7fr_0.5fr_0.4fr] items-center rounded-xl px-2 py-2 text-xs text-slate-600 transition hover:bg-slate-50 group"
               >
                 <span className="font-semibold text-slate-700">{doctor.name}</span>
                 <span>{doctor.speciality}</span>
@@ -1213,6 +1239,27 @@ function ClinicManagementPage() {
                 <Badge className={doctor.isActive ? "w-fit bg-emerald-50 text-emerald-600" : "w-fit bg-slate-100 text-slate-500"}>
                   {doctor.isActive ? "Active" : "Inactive"}
                 </Badge>
+                <div className="flex items-center justify-end gap-2">
+                  <EditDoctorDialog
+                    doctorItem={doctor}
+                    clinicId={selectedClinicId}
+                    onUpdate={handleUpdateDoctor}
+                  >
+                    <button
+                      className="text-slate-300 hover:text-slate-500 transition opacity-0 group-hover:opacity-100"
+                      title="Edit doctor"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </button>
+                  </EditDoctorDialog>
+                  <button
+                    onClick={() => handleDeleteDoctor(doctor.id, doctor.name)}
+                    className="text-slate-300 hover:text-red-500 transition opacity-0 group-hover:opacity-100"
+                    title="Delete doctor"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
             ))}
 
