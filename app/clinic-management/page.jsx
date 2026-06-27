@@ -33,6 +33,8 @@ import {
   KeyRound,
   Eye,
   EyeOff,
+  Ticket,
+  Plus,
 } from "lucide-react";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
@@ -47,7 +49,7 @@ import ErrorMessage from "../components/ErrorMessage";
 import SuccessMessage from "../components/SuccessMessage";
 import LoadingSpinner from "../components/LoadingSpinner";
 import ProtectedRoute from "../components/ProtectedRoute";
-import { apiGet, apiPatch, apiDelete } from "../lib/api";
+import { apiGet, apiPatch, apiDelete, apiPost } from "../lib/api";
 import { AuthContext } from "../context/AuthContext";
 
 const defaultSettings = {
@@ -237,6 +239,40 @@ function ClinicManagementPage() {
   const [totalFiles, setTotalFiles] = useState(0);
   const [documents, setDocuments] = useState([]);
 
+  // ── Token Slot Timings (page-level) ─────────────────────────────────────────
+  const TOKEN_STATUS_OPTIONS = ["open", "full", "closed", "cancelled"];
+  const DAY_LABELS_FULL = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  const DAY_LABELS_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const TODAY_ISO = new Date().toISOString().slice(0, 10);
+
+  function makeTempSlotId() {
+    return `ts-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`;
+  }
+  function makeBlankSlot(doctorId) {
+    return {
+      _tempId: makeTempSlotId(),
+      id: null,
+      doctor_id: doctorId || "",
+      day_of_week: 1,
+      start_time: "09:00",
+      end_time: "13:00",
+      max_appointments_per_slot: 15,
+      status: "open",
+      effective_from: TODAY_ISO,
+      effective_to: "",
+      _dirty: false,
+      _isNew: true,
+    };
+  }
+
+  const [tokenSlotsPage, setTokenSlotsPage] = useState([]);
+  const [isLoadingTokenSlotsPage, setIsLoadingTokenSlotsPage] = useState(false);
+  const [tokenSlotPageError, setTokenSlotPageError] = useState("");
+  const [tokenSlotPageSuccess, setTokenSlotPageSuccess] = useState("");
+  const [savingTokenSlotPageIds, setSavingTokenSlotPageIds] = useState(new Set());
+  const [deletingTokenSlotPageId, setDeletingTokenSlotPageId] = useState(null);
+  const [selectedDoctorForSlot, setSelectedDoctorForSlot] = useState("");
+
   const [isLoadingClinics, setIsLoadingClinics] = useState(true);
   const [isLoadingClinicData, setIsLoadingClinicData] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -293,6 +329,38 @@ function ClinicManagementPage() {
     }
   }, []);
 
+  // ── Token Slot Timings loader (must be defined before loadSelectedClinicData) ──
+  const loadTokenSlotsPage = useCallback(async (clinicId) => {
+    if (!clinicId) return;
+    try {
+      setIsLoadingTokenSlotsPage(true);
+      setTokenSlotPageError("");
+      const res = await apiGet(`/slots?clinic_id=${clinicId}&limit=100`);
+      if (!res?.success) throw new Error(res?.error || "Failed to load token slots");
+      const raw = Array.isArray(res.data) ? res.data : [];
+      setTokenSlotsPage(
+        raw.map((r) => ({
+          _tempId: r.id,
+          id: r.id,
+          doctor_id: r.doctor_id,
+          day_of_week: r.day_of_week,
+          start_time: String(r.start_time || "").slice(0, 5),
+          end_time: String(r.end_time || "").slice(0, 5),
+          max_appointments_per_slot: r.max_appointments_per_slot,
+          status: r.status || "open",
+          effective_from: r.effective_from ? String(r.effective_from).slice(0, 10) : "",
+          effective_to: r.effective_to ? String(r.effective_to).slice(0, 10) : "",
+          _dirty: false,
+          _isNew: false,
+        }))
+      );
+    } catch (err) {
+      setTokenSlotPageError(err.message || "Failed to load token slots.");
+    } finally {
+      setIsLoadingTokenSlotsPage(false);
+    }
+  }, []);
+
   const loadSelectedClinicData = useCallback(async (clinicId) => {
     if (!clinicId) return;
 
@@ -328,7 +396,8 @@ function ClinicManagementPage() {
       const filesCount = documentsResponse?.pagination?.total || documentsPayload.length || 0;
 
       setSelectedClinicData(clinicPayload);
-      setSettings(normalizeSettings(settingsPayload));
+      const normalized = normalizeSettings(settingsPayload);
+      setSettings(normalized);
       setTotalFiles(filesCount);
       setDocuments(documentsPayload);
       setPhoneNumbers(
@@ -351,6 +420,12 @@ function ClinicManagementPage() {
           priceCharged: item.price_charged != null ? item.price_charged : null,
         }))
       );
+      // Load token slots if clinic uses token-based booking
+      if (!normalized.is_slots_needed) {
+        loadTokenSlotsPage(clinicId);
+      } else {
+        setTokenSlotsPage([]);
+      }
     } catch (error) {
       setPageError(error.message || "Failed to load clinic details.");
       setSelectedClinicData(null);
@@ -362,7 +437,7 @@ function ClinicManagementPage() {
     } finally {
       setIsLoadingClinicData(false);
     }
-  }, []);
+  }, [loadTokenSlotsPage]);
 
   useEffect(() => {
     loadClinics();
@@ -488,6 +563,88 @@ function ClinicManagementPage() {
     setDoctors((prev) =>
       prev.map((d) => (d.id === updatedDoctor.id ? updatedDoctor : d))
     );
+  };
+
+  // ── Token Slot Timings handlers (page-level) ─────────────────────────────────
+  const updateTokenSlotPageField = (tid, field, value) => {
+    setTokenSlotsPage((prev) =>
+      prev.map((s) => (s._tempId === tid ? { ...s, [field]: value, _dirty: true } : s))
+    );
+  };
+
+  const addTokenSlotPageRow = () => {
+    const newRow = makeBlankSlot(selectedDoctorForSlot || (doctors[0]?.id ?? ""));
+    setTokenSlotsPage((prev) => [...prev, newRow]);
+  };
+
+  const saveTokenSlotPageRow = async (row) => {
+    if (!selectedClinicId) return;
+    setTokenSlotPageError("");
+    if (!row.doctor_id) { setTokenSlotPageError("Please select a doctor."); return; }
+    if (!row.start_time || !row.end_time) { setTokenSlotPageError("Start and end time are required."); return; }
+    if (row.end_time <= row.start_time) { setTokenSlotPageError("End time must be after start time."); return; }
+    if (!row.max_appointments_per_slot || Number(row.max_appointments_per_slot) <= 0) {
+      setTokenSlotPageError("Max tokens must be a positive number.");
+      return;
+    }
+    setSavingTokenSlotPageIds((prev) => new Set(prev).add(row._tempId));
+    try {
+      const timeToApi = (v) => {
+        const [h = "00", m = "00"] = String(v).split(":");
+        return `${h}:${m}:00`;
+      };
+      const payload = {
+        clinic_id: selectedClinicId,
+        doctor_id: Number(row.doctor_id),
+        day_of_week: Number(row.day_of_week),
+        start_time: timeToApi(row.start_time),
+        end_time: timeToApi(row.end_time),
+        max_appointments_per_slot: Number(row.max_appointments_per_slot),
+        status: row.status || "open",
+        effective_from: row.effective_from || undefined,
+        effective_to: row.effective_to || null,
+      };
+      if (row._isNew) {
+        const res = await apiPost("/slots", payload);
+        if (!res?.success) throw new Error(res?.error || "Failed to create token slot.");
+        const created = res.data;
+        setTokenSlotsPage((prev) =>
+          prev.map((s) =>
+            s._tempId === row._tempId
+              ? { ...s, id: created.id, _tempId: created.id, _isNew: false, _dirty: false }
+              : s
+          )
+        );
+      } else {
+        const { clinic_id, doctor_id, ...patch } = payload;
+        const res = await apiPatch(`/slots/${row.id}`, patch);
+        if (!res?.success) throw new Error(res?.error || "Failed to update token slot.");
+        setTokenSlotsPage((prev) =>
+          prev.map((s) => (s._tempId === row._tempId ? { ...s, _dirty: false } : s))
+        );
+      }
+      setTokenSlotPageSuccess("Token slot saved.");
+      setTimeout(() => setTokenSlotPageSuccess(""), 2000);
+    } catch (err) {
+      setTokenSlotPageError(err.message || "Failed to save token slot.");
+    } finally {
+      setSavingTokenSlotPageIds((prev) => { const n = new Set(prev); n.delete(row._tempId); return n; });
+    }
+  };
+
+  const deleteTokenSlotPageRow = async (row) => {
+    if (row._isNew) { setTokenSlotsPage((prev) => prev.filter((s) => s._tempId !== row._tempId)); return; }
+    if (!window.confirm("Delete this token slot block?")) return;
+    setDeletingTokenSlotPageId(row._tempId);
+    try {
+      const res = await apiDelete(`/slots/${row.id}`);
+      if (!res?.success) throw new Error(res?.error || "Failed to delete token slot.");
+      setTokenSlotsPage((prev) => prev.filter((s) => s._tempId !== row._tempId));
+    } catch (err) {
+      setTokenSlotPageError(err.message || "Failed to delete token slot.");
+    } finally {
+      setDeletingTokenSlotPageId(null);
+    }
   };
 
   const handleDeleteDocument = async (docId, docName) => {
@@ -1245,6 +1402,7 @@ function ClinicManagementPage() {
                     doctorItem={doctor}
                     clinicId={selectedClinicId}
                     onUpdate={handleUpdateDoctor}
+                    isTokenSystem={!settings.is_slots_needed}
                   >
                     <button
                       className="text-slate-300 hover:text-slate-500 transition opacity-0 group-hover:opacity-100"
@@ -1272,6 +1430,8 @@ function ClinicManagementPage() {
           </div>
         </Card>
       </div>
+
+      {/* ─── Token Slot Timings (Token-based booking only) ───────────────── */}
 
       {/* ─── Integrations Row ───────────────────────────────────── */}
       <div className="mt-6 grid gap-4 lg:grid-cols-3">
