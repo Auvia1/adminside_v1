@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart3, Building2, LogOut, Users, CreditCard, IndianRupee } from "lucide-react";
+import { BarChart3, Building2, LogOut, Users, CreditCard, IndianRupee, Settings } from "lucide-react";
 import useAuth from "@/app/hooks/useAuth";
 
 export default function Sidebar() {
@@ -63,6 +63,16 @@ export default function Sidebar() {
           }`}
         >
           <IndianRupee className="h-4 w-4" /> Cost Analytics
+        </Link>
+        <Link
+          href="/settings"
+          className={`flex w-full items-center gap-2 rounded-xl px-3 py-2 font-semibold transition hover:-translate-y-0.5 ${
+            isActive("/settings")
+              ? "bg-(--brand-primary)/10 text-(--brand-primary)"
+              : "text-slate-500 hover:bg-slate-100"
+          }`}
+        >
+          <Settings className="h-4 w-4" /> Settings
         </Link>
         {admin?.role === 'superadmin' && (
           <Link

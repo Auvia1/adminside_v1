@@ -21,7 +21,7 @@ export default function SettingsPageWrapper() {
 }
 
 function SettingsPage() {
-  const { clinic } = useAuth();
+  const { admin, logout } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -29,8 +29,6 @@ function SettingsPage() {
     name: '',
     email: '',
     phone: '',
-    address: '',
-    timezone: 'Asia/Kolkata',
   });
   const [passwordData, setPasswordData] = useState({
     current_password: '',
@@ -39,17 +37,23 @@ function SettingsPage() {
   });
 
   useEffect(() => {
-    if (clinic?.id) {
+    if (admin?.id) {
       loadSettings();
     }
-  }, [clinic?.id]);
+  }, [admin?.id]);
 
   const loadSettings = async () => {
     try {
       setLoading(true);
       setError('');
-      const response = await apiGet(`/clinics/${clinic.id}`);
-      setFormData(response.data || formData);
+      const response = await apiGet('/adminlogin/me');
+      if (response?.admin) {
+        setFormData({
+          name: response.admin.name || '',
+          email: response.admin.email || '',
+          phone: response.admin.phone || '',
+        });
+      }
     } catch (err) {
       setError(err.message || 'Failed to load settings');
     } finally {
@@ -61,10 +65,15 @@ function SettingsPage() {
     e.preventDefault();
     try {
       setError('');
-      await apiPatch(`/clinics/${clinic.id}`, formData);
-      setSuccess('Settings updated successfully');
+      setLoading(true);
+      const response = await apiPatch('/adminlogin/me', formData);
+      if (response?.success) {
+        setSuccess('Profile updated successfully');
+      }
     } catch (err) {
       setError(err.message || 'Failed to update settings');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -78,63 +87,56 @@ function SettingsPage() {
 
     try {
       setError('');
-      await apiPost(`/clinics/${clinic.id}/change-password`, {
+      setLoading(true);
+      await apiPost('/adminlogin/change-password', {
         current_password: passwordData.current_password,
         new_password: passwordData.new_password,
       });
-      setSuccess('Password changed successfully');
+      setSuccess('Password changed successfully! Logging out...');
       setPasswordData({ current_password: '', new_password: '', confirm_password: '' });
+      setTimeout(() => {
+        logout();
+      }, 1500);
     } catch (err) {
       setError(err.message || 'Failed to change password');
+    } finally {
+      setLoading(false);
     }
   };
 
-  if (loading) return <LoadingSpinner text="Loading settings..." />;
+  if (loading && !formData.name) return <LoadingSpinner text="Loading settings..." />;
 
   return (
     <div className="space-y-6 p-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">Settings</h1>
-        <p className="text-sm text-slate-600 mt-1">Manage clinic information and account settings</p>
+        <h1 className="text-2xl font-bold text-slate-900">Account Settings</h1>
+        <p className="text-sm text-slate-600 mt-1">Manage your administrator profile and account settings</p>
       </div>
 
       {error && <ErrorMessage message={error} onDismiss={() => setError('')} />}
       {success && <SuccessMessage message={success} onDismiss={() => setSuccess('')} />}
 
-      {/* Clinic Settings */}
+      {/* Admin Settings */}
       <Card className="p-6">
-        <h2 className="text-lg font-semibold text-slate-900 mb-6">Clinic Information</h2>
+        <h2 className="text-lg font-semibold text-slate-900 mb-6">Admin Information</h2>
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <label className="text-sm font-semibold text-slate-700">Clinic Name</label>
-              <Input value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} />
+              <label className="text-sm font-semibold text-slate-700">Full Name</label>
+              <Input value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-semibold text-slate-700">Email</label>
-              <Input type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} />
+              <label className="text-sm font-semibold text-slate-700">Email Address</label>
+              <Input type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} required />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-semibold text-slate-700">Phone</label>
+              <label className="text-sm font-semibold text-slate-700">Phone Number</label>
               <Input value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} />
             </div>
-            <div className="space-y-2">
-              <label className="text-sm font-semibold text-slate-700">Timezone</label>
-              <select value={formData.timezone} onChange={(e) => setFormData({ ...formData, timezone: e.target.value })} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm">
-                <option value="Asia/Kolkata">Asia/Kolkata (IST)</option>
-                <option value="Asia/Dubai">Asia/Dubai (GST)</option>
-                <option value="UTC">UTC</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-sm font-semibold text-slate-700">Address</label>
-            <Input value={formData.address} onChange={(e) => setFormData({ ...formData, address: e.target.value })} />
           </div>
 
           <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
-            <Button variant="outline" onClick={() => loadSettings()}>Cancel</Button>
+            <Button variant="outline" type="button" onClick={() => loadSettings()} disabled={loading}>Cancel</Button>
             <Button type="submit" disabled={loading}>{loading ? 'Saving...' : 'Save Changes'}</Button>
           </div>
         </form>
@@ -153,6 +155,7 @@ function SettingsPage() {
               type="password" 
               value={passwordData.current_password} 
               onChange={(e) => setPasswordData({ ...passwordData, current_password: e.target.value })} 
+              required
             />
           </div>
           <div className="grid gap-4 md:grid-cols-2">
@@ -162,6 +165,7 @@ function SettingsPage() {
                 type="password" 
                 value={passwordData.new_password} 
                 onChange={(e) => setPasswordData({ ...passwordData, new_password: e.target.value })} 
+                required
               />
             </div>
             <div className="space-y-2">
@@ -170,12 +174,13 @@ function SettingsPage() {
                 type="password" 
                 value={passwordData.confirm_password} 
                 onChange={(e) => setPasswordData({ ...passwordData, confirm_password: e.target.value })} 
+                required
               />
             </div>
           </div>
 
           <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
-            <Button variant="outline" onClick={() => setPasswordData({ current_password: '', new_password: '', confirm_password: '' })}>Cancel</Button>
+            <Button variant="outline" type="button" onClick={() => setPasswordData({ current_password: '', new_password: '', confirm_password: '' })} disabled={loading}>Cancel</Button>
             <Button type="submit" disabled={loading}>{loading ? 'Updating...' : 'Update Password'}</Button>
           </div>
         </form>
