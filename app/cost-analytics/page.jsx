@@ -15,6 +15,9 @@ import {
   Wallet,
   ArrowUpRight,
   ArrowDownRight,
+  Mic,
+  Volume2,
+  FileText,
 } from 'lucide-react';
 import {
   PieChart,
@@ -40,23 +43,21 @@ import { apiGet } from '@/app/lib/api';
 
 // ─── Color Palette ──────────────────────────────────────────────────────────
 const COST_COLORS = {
-  stt: '#0f6676',     // brand teal
-  tts: '#6366f1',     // indigo
-  llm_in: '#f59e0b',  // amber
-  llm_out: '#ef4444',  // rose
-  telephony: '#8b5cf6', // violet
-  whatsapp: '#06b6d4',  // cyan
-  other: '#94a3b8',     // slate
+  audio_in: '#0f6676',    // brand teal – Gemini Live input stream
+  audio_out: '#6366f1',   // indigo – Gemini Live synthesized voice
+  text_summary: '#f59e0b',// amber – Gemini 2.5 Flash post-call summary
+  telephony: '#8b5cf6',   // violet – Vobiz provider
+  whatsapp: '#06b6d4',    // cyan – appointment notifications
+  recording: '#94a3b8',   // slate – recording & storage
 };
 
 const COST_LABELS = {
-  stt: 'Speech-to-Text',
-  tts: 'Text-to-Speech',
-  llm_in: 'LLM Input',
-  llm_out: 'LLM Output',
-  telephony: 'Telephony',
+  audio_in: 'Audio Input (Gemini Live)',
+  audio_out: 'Audio Output (Gemini Live)',
+  text_summary: 'Text Summary (Flash)',
+  telephony: 'Telephony (Vobiz)',
   whatsapp: 'WhatsApp',
-  other: 'Other',
+  recording: 'Recording & Storage',
 };
 
 const RATE_PER_MINUTE = 5; // ₹5/min billed to clinics
@@ -209,7 +210,7 @@ function CostAnalyticsPage() {
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Cost Analytics</h1>
           <p className="mt-1 text-sm text-slate-500">
-            Detailed per-call cost breakdown across STT, TTS, LLM, Telephony & WhatsApp.
+            Detailed per-call cost breakdown — Gemini 3.1 Live (Speech-to-Speech), Text Summary, Telephony & WhatsApp.
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -321,15 +322,18 @@ function OverviewTab({ summary, loading }) {
     );
   }
 
-  // Build donut data
+  // Build donut data — mapped from the Gemini 3.1 Native billing model
+  // llm_in_cost = Audio Input (Gemini Live stream) + Text Summary Input (Flash)
+  // llm_out_cost = Audio Output (Gemini Live voice) + Text Summary Output (Flash)
+  // Since text summary tokens are negligibly small vs audio tokens, we show:
+  //   Audio In ≈ llm_in_cost, Audio Out ≈ llm_out_cost
+  // The "other" column = recording & storage cost
   const costComponents = [
-    { key: 'stt', value: Number(summary.total_stt_cost || 0) },
-    { key: 'tts', value: Number(summary.total_tts_cost || 0) },
-    { key: 'llm_in', value: Number(summary.total_llm_in_cost || 0) },
-    { key: 'llm_out', value: Number(summary.total_llm_out_cost || 0) },
+    { key: 'audio_in', value: Number(summary.total_llm_in_cost || 0) },
+    { key: 'audio_out', value: Number(summary.total_llm_out_cost || 0) },
     { key: 'telephony', value: Number(summary.total_telephony_cost || 0) },
     { key: 'whatsapp', value: Number(summary.total_whatsapp_cost || 0) },
-    { key: 'other', value: Number(summary.total_other_cost || 0) },
+    { key: 'recording', value: Number(summary.total_other_cost || 0) },
   ].filter((c) => c.value > 0);
 
   const donutData = costComponents.map((c) => ({
@@ -344,11 +348,11 @@ function OverviewTab({ summary, loading }) {
   const ranked = [...costComponents].sort((a, b) => b.value - a.value);
   const maxVal = ranked[0]?.value || 1;
 
-  // Token & character stats
+  // Token & usage stats — reflects Gemini 3.1 native audio token model (25 tokens/sec)
   const tokenStats = [
-    { label: 'LLM Input Tokens', value: Number(summary.total_llm_in_tokens || 0).toLocaleString() },
-    { label: 'LLM Output Tokens', value: Number(summary.total_llm_out_tokens || 0).toLocaleString() },
-    { label: 'TTS Characters', value: Number(summary.total_tts_chars || 0).toLocaleString() },
+    { label: 'Audio + Summary In Tokens', value: Number(summary.total_llm_in_tokens || 0).toLocaleString() },
+    { label: 'Audio + Summary Out Tokens', value: Number(summary.total_llm_out_tokens || 0).toLocaleString() },
+    { label: 'Total Calls', value: Number(summary.total_calls || 0).toLocaleString() },
     { label: 'Credits Billed', value: `₹${Number(summary.total_credits_billed || 0).toFixed(2)}` },
   ];
 
@@ -579,29 +583,17 @@ function CallDetailsTab({ dateRange }) {
                   <th className="whitespace-nowrap px-4 py-3.5 font-semibold">Date</th>
                   <th className="whitespace-nowrap px-4 py-3.5 font-semibold">Caller</th>
                   <th className="whitespace-nowrap px-4 py-3.5 font-semibold">Duration</th>
-                  <th className="whitespace-nowrap px-4 py-3.5 font-semibold text-right">Rounded Time</th>
+                  <th className="whitespace-nowrap px-4 py-3.5 font-semibold text-right">Billed Min</th>
                   <th className="whitespace-nowrap px-4 py-3.5 font-semibold text-right">
                     <span className="inline-flex items-center gap-1">
-                      <span className="h-2 w-2 rounded-full" style={{ background: COST_COLORS.stt }} />
-                      STT
+                      <span className="h-2 w-2 rounded-full" style={{ background: COST_COLORS.audio_in }} />
+                      Audio In
                     </span>
                   </th>
                   <th className="whitespace-nowrap px-4 py-3.5 font-semibold text-right">
                     <span className="inline-flex items-center gap-1">
-                      <span className="h-2 w-2 rounded-full" style={{ background: COST_COLORS.tts }} />
-                      TTS
-                    </span>
-                  </th>
-                  <th className="whitespace-nowrap px-4 py-3.5 font-semibold text-right">
-                    <span className="inline-flex items-center gap-1">
-                      <span className="h-2 w-2 rounded-full" style={{ background: COST_COLORS.llm_in }} />
-                      LLM In
-                    </span>
-                  </th>
-                  <th className="whitespace-nowrap px-4 py-3.5 font-semibold text-right">
-                    <span className="inline-flex items-center gap-1">
-                      <span className="h-2 w-2 rounded-full" style={{ background: COST_COLORS.llm_out }} />
-                      LLM Out
+                      <span className="h-2 w-2 rounded-full" style={{ background: COST_COLORS.audio_out }} />
+                      Audio Out
                     </span>
                   </th>
                   <th className="whitespace-nowrap px-4 py-3.5 font-semibold text-right">
@@ -616,13 +608,19 @@ function CallDetailsTab({ dateRange }) {
                       WhatsApp
                     </span>
                   </th>
+                  <th className="whitespace-nowrap px-4 py-3.5 font-semibold text-right">
+                    <span className="inline-flex items-center gap-1">
+                      <span className="h-2 w-2 rounded-full" style={{ background: COST_COLORS.recording }} />
+                      Recording
+                    </span>
+                  </th>
                   <th className="whitespace-nowrap px-4 py-3.5 font-semibold text-right">Total</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {records.length === 0 ? (
                   <tr>
-                    <td colSpan={11} className="px-6 py-12 text-center text-slate-400">
+                    <td colSpan={10} className="px-6 py-12 text-center text-slate-400">
                       No cost records found for this period.
                     </td>
                   </tr>
@@ -654,12 +652,6 @@ function CallDetailsTab({ dateRange }) {
                         {Math.ceil(row.duration_minutes)}m
                       </td>
                       <td className="whitespace-nowrap px-4 py-3 text-right font-mono text-xs text-slate-600">
-                        {Number(row.stt_cost).toFixed(4)}
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-3 text-right font-mono text-xs text-slate-600">
-                        {Number(row.tts_cost).toFixed(4)}
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-3 text-right font-mono text-xs text-slate-600">
                         {Number(row.llm_in_cost).toFixed(4)}
                       </td>
                       <td className="whitespace-nowrap px-4 py-3 text-right font-mono text-xs text-slate-600">
@@ -670,6 +662,9 @@ function CallDetailsTab({ dateRange }) {
                       </td>
                       <td className="whitespace-nowrap px-4 py-3 text-right font-mono text-xs text-slate-600">
                         {Number(row.whatsapp_cost).toFixed(4)}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 text-right font-mono text-xs text-slate-600">
+                        {Number(row.other_cost).toFixed(4)}
                       </td>
                       <td className="whitespace-nowrap px-4 py-3 text-right text-xs font-bold text-slate-900">
                         ₹{Number(row.total_cost).toFixed(4)}
@@ -812,7 +807,7 @@ function MarginsTab({ dateRange, summary, summaryLoading }) {
     {
       label: 'Total Cost',
       value: formatRupee(totalCost),
-      sub: 'STT + TTS + LLM + Telephony + WA',
+      sub: 'Audio In + Audio Out + Telephony + WA + Recording',
       color: 'bg-rose-50 text-rose-600',
       icon: TrendingUp,
     },
